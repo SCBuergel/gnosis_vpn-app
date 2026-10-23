@@ -11,7 +11,11 @@ import type {
   RouteHealthView,
 } from "@src/services/vpnService.ts";
 import { useAppStore } from "@src/stores/appStore.ts";
-import { getExitData, rankContext } from "@src/utils/destinations.ts";
+import {
+  getExitData,
+  MIN_PATH_VALUE,
+  rankContext,
+} from "@src/utils/destinations.ts";
 import {
   canBeFirstConnect,
   FIRST_CONNECT,
@@ -39,6 +43,7 @@ import {
   getSlotLoad,
   getSlotLoadLevel,
   type HealthColor,
+  type LoadLevel,
 } from "@src/utils/exitHealth.ts";
 import { levelValueClass } from "../exitNode/levelColor.ts";
 import HopsIcon from "../exitNode/HopsIcon.tsx";
@@ -101,11 +106,14 @@ const ROUTE_TOOLTIP =
   "How many HOPR relays each packet passes on its way to the exit.";
 
 /** A label whose explanation shows on hover or focus, with no visible icon. */
-function Label(props: {
-  text: string;
+/** A big number with its label; the explanation opens from anywhere on it, by hover or focus. */
+function Metric(props: {
+  label: string;
   tooltip: string | JSX.Element;
   // What a screen reader gets; a string tooltip is its own description.
   description?: string;
+  value: string | null;
+  valueClass: string;
 }) {
   return (
     <Tooltip
@@ -116,57 +124,48 @@ function Label(props: {
       focusable
       description={props.description ??
         (typeof props.tooltip === "string" ? props.tooltip : undefined)}
+      triggerClass="min-w-0 flex-1"
     >
-      <span class="cursor-help">{props.text}</span>
+      <div class="flex min-w-0 flex-1 cursor-help flex-col">
+        <span class="text-[11px] text-text-muted">{props.label}</span>
+        <span
+          class={`mt-0.5 text-lg font-bold leading-tight ${
+            props.value === null ? "text-text-muted" : props.valueClass
+          }`}
+        >
+          {props.value ?? "–"}
+        </span>
+      </div>
     </Tooltip>
   );
 }
 
-function Metric(props: {
-  label: string;
-  tooltip: string | JSX.Element;
-  description?: string;
-  value: string | null;
-  valueClass: string;
-}) {
-  return (
-    <div class="flex min-w-0 flex-1 flex-col">
-      <span class="text-[11px] text-text-muted">
-        <Label
-          text={props.label}
-          tooltip={props.tooltip}
-          description={props.description}
-        />
-      </span>
-      <span
-        class={`mt-0.5 text-lg font-bold leading-tight ${
-          props.value === null ? "text-text-muted" : props.valueClass
-        }`}
-      >
-        {props.value ?? "–"}
-      </span>
-    </div>
-  );
-}
-
+/** One line of the diagnostics; the value is coloured only when it works against the connection. */
 function DiagnosticRow(props: {
   label: string;
   tooltip: string;
   value: string | null;
+  valueClass?: string;
 }) {
   return (
-    <div class="flex items-center justify-between gap-3 py-1 text-xs">
-      <span class="text-text-muted">
-        <Label text={props.label} tooltip={props.tooltip} />
-      </span>
-      <span
-        class={`${
-          props.value === null ? "text-text-muted" : "text-text-primary"
-        }`}
-      >
-        {props.value ?? "–"}
-      </span>
-    </div>
+    <Tooltip
+      content={<span>{props.tooltip}</span>}
+      position="top"
+      focusable
+      description={props.tooltip}
+      triggerClass="w-full"
+    >
+      <div class="flex w-full cursor-help items-center justify-between gap-3 py-1 text-xs">
+        <span class="text-text-muted">{props.label}</span>
+        <span
+          class={props.value === null
+            ? "text-text-muted"
+            : props.valueClass ?? "text-text-primary"}
+        >
+          {props.value ?? "–"}
+        </span>
+      </div>
+    </Tooltip>
   );
 }
 
@@ -224,6 +223,14 @@ export default function StatusCard(
   const cpuValue = () => {
     const percent = cpu();
     return percent === null ? null : `${percent}%`;
+  };
+  // Orange or red only when the value works against the connection; a good value stays quiet.
+  const warnClass = (level: LoadLevel | null): string | undefined =>
+    level === null || level === "low" ? undefined : levelValueClass(level);
+  const pathLevel = (): LoadLevel | null => {
+    const walk = routeHealth()?.walk;
+    if (walk?.found !== "Paths") return null;
+    return walk.best_value < MIN_PATH_VALUE ? "medium" : "low";
   };
 
   const quality = () => getConnectionQuality(latencyMs(), cpuLevel(), stall());
@@ -452,6 +459,7 @@ export default function StatusCard(
                   label="Server load"
                   tooltip={SERVER_LOAD_TOOLTIP}
                   value={cpuValue()}
+                  valueClass={warnClass(cpuLevel())}
                 />
                 <Show when={isConnected()}>
                   <DiagnosticRow
@@ -469,6 +477,7 @@ export default function StatusCard(
                   label="Path"
                   tooltip={PATH_TOOLTIP}
                   value={pathValue()}
+                  valueClass={warnClass(pathLevel())}
                 />
                 <DiagnosticRow
                   label={isConnected() ? "Relays" : "Relays available"}
