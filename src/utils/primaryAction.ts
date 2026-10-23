@@ -1,5 +1,5 @@
 import type { AppState } from "@src/stores/appStore.ts";
-import { effectiveActive } from "@src/stores/destinationMode.ts";
+import { activeDestination } from "@src/stores/destinationMode.ts";
 import {
   isSelectable,
   isVpnActive,
@@ -20,8 +20,7 @@ type PrimaryActions = {
 export function primaryActionEnabled(appState: AppState): boolean {
   if (appState.isLoading) return false;
   if (isVpnActive(appState.vpnStatus, appState.targetDestination)) return true;
-  const id = effectiveActive(appState.mode, Date.now());
-  const target = id ? appState.destinations[id] : undefined;
+  const target = activeDestination(appState);
   const context = rankContext(appState);
   // Selectable, not ready: a weak route the user picked deliberately must still connect.
   if (isSelectable(target, context)) return true;
@@ -40,7 +39,7 @@ export async function runPrimaryAction(
       await actions.disconnect();
     } else {
       // Resolved fresh at call time: a memo recomputes on `mode`, not on the clock crossing settleAt.
-      const id = effectiveActive(appState.mode, Date.now());
+      const id = activeDestination(appState)?.destination.id;
       if (id) await actions.connect(id);
     }
   } catch (error) {

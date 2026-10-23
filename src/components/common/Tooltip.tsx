@@ -21,7 +21,6 @@ export default function Tooltip(props: {
   position?: Side | "auto";
   // "end" puts the bubble's right edge on the trigger's right edge; the arrow still points at the trigger.
   align?: "center" | "end";
-  tabIndex?: number;
   // When true the tooltip never shows (and hides if already visible).
   disabled?: boolean;
   // Shows the tooltip as if hovered, after the same delay; hover still works alongside.
@@ -33,8 +32,6 @@ export default function Tooltip(props: {
   triggerRole?: "presentation";
   // Extra classes for the bubble, e.g. a wider max width.
   bubbleClass?: string;
-  // id for the bubble, so a trigger can point at it with aria-describedby.
-  id?: string;
   // The element the bubble hangs on when it is not the whole trigger, e.g. one
   // cell of a row that shows the tooltip wherever it is hovered.
   anchor?: () => HTMLElement | null | undefined;
@@ -141,7 +138,6 @@ export default function Tooltip(props: {
       ref={triggerRef}
       role={props.triggerRole}
       class={`relative inline-flex ${props.triggerClass ?? "w-fit"}`}
-      tabindex={props.tabIndex}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocusIn={show}
@@ -152,7 +148,6 @@ export default function Tooltip(props: {
         <Portal mount={document.body}>
           <div
             ref={bubbleRef}
-            id={props.id}
             role="tooltip"
             class={`pointer-events-none fixed z-200 w-max rounded-lg bg-neutral-800 px-3 py-2 shadow-lg text-xs leading-relaxed text-gray-100 -translate-x-1/2 transition-[opacity,scale] duration-150 ease-out starting:opacity-0 starting:scale-95 ${
               props.bubbleClass ?? "max-w-52"

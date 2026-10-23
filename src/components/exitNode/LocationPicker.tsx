@@ -24,8 +24,10 @@ import {
   sortForPicker,
 } from "@src/utils/destinations.ts";
 import Tooltip from "../common/Tooltip.tsx";
+import SearchIcon from "../icons/SearchIcon.tsx";
 import LocationRow from "./LocationRow.tsx";
 import UnreachableDialog from "./UnreachableDialog.tsx";
+import { createClock } from "@src/utils/clock.ts";
 
 // Fallback width when no frame is given; the frame normally sets it.
 const DEFAULT_WIDTH_PX = 270;
@@ -163,9 +165,8 @@ export default function LocationPicker(props: {
   });
 
   // One clock for every row's "Checked": it has to age between status updates.
-  const [nowSec, setNowSec] = createSignal(Date.now() / 1000);
-  const tick = setInterval(() => setNowSec(Date.now() / 1000), 1000);
-  onCleanup(() => clearInterval(tick));
+  const nowMs = createClock(1000);
+  const nowSec = () => nowMs() / 1000;
 
   const vpnActive = () =>
     isVpnActive(appState.vpnStatus, appState.targetDestination);
@@ -283,18 +284,7 @@ export default function LocationPicker(props: {
         />
         <div class="flex shrink-0 items-center gap-1.5 p-2">
           <div class="relative min-w-0 flex-1">
-            <svg
-              viewBox="0 0 24 24"
-              class="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-text-muted"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              aria-hidden="true"
-            >
-              <circle cx="10.5" cy="10.5" r="7" />
-              <path d="M16 16l5 5" />
-            </svg>
+            <SearchIcon class="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-text-muted" />
             <input
               ref={searchInputRef}
               type="text"

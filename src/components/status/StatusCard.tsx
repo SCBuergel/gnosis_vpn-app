@@ -1,9 +1,9 @@
 import {
-  createEffect,
   createMemo,
   createSignal,
   type JSX,
   onCleanup,
+  onMount,
   Show,
 } from "solid-js";
 import type {
@@ -46,6 +46,7 @@ import ChevronIcon from "../common/ChevronIcon.tsx";
 import Tag from "../common/Tag.tsx";
 import Tooltip from "../common/Tooltip.tsx";
 import QualityBars, { type BarTone } from "./QualityBars.tsx";
+import { createClock } from "@src/utils/clock.ts";
 
 // Module scope: the choice survives screen switches and resets on app restart.
 const [expanded, setExpanded] = createSignal(false);
@@ -207,9 +208,8 @@ export default function StatusCard(
     getHopCount(props.destinationState.destination.routing);
 
   // Own clock: "Last checked" has to age between status updates.
-  const [nowSec, setNowSec] = createSignal(Date.now() / 1000);
-  const tick = setInterval(() => setNowSec(Date.now() / 1000), 1000);
-  onCleanup(() => clearInterval(tick));
+  const nowMs = createClock(1000);
+  const nowSec = () => nowMs() / 1000;
   const lastChecked = (): string | null => {
     const rh = routeHealth();
     if (!rh) return null;
@@ -298,17 +298,20 @@ export default function StatusCard(
   // Measured max-height rather than 0fr/1fr: WebKitGTK misrenders the grid collapse.
   let panelRef: HTMLDivElement | undefined;
   const [panelHeightPx, setPanelHeightPx] = createSignal(0);
-  createEffect(() => {
-    latency();
-    loadValue();
-    lastChecked();
-    relays();
-    pathValue();
-    if (panelRef) setPanelHeightPx(panelRef.scrollHeight);
+  // The panel's own size is the dependency, whatever row or value changed it.
+  onMount(() => {
+    if (!panelRef) return;
+    const panel = panelRef;
+    const observer = new ResizeObserver(() =>
+      setPanelHeightPx(panel.scrollHeight)
+    );
+    observer.observe(panel);
+    onCleanup(() => observer.disconnect());
   });
 
   const toggle = () => setExpanded((open) => !open);
 
+  // keyed: a new destination gets a fresh card instead of animating the old one's panel height.
   return (
     <Show when={destId()} keyed>
       {(_id: string) => (

@@ -10,9 +10,10 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import {
-  isPreparingSafeRunMode,
+  fundingStatusOf,
   isRunningRunMode,
   isWarmupRunMode,
+  preparingSafeOf,
 } from "@src/services/vpnService.ts";
 import { useAppStore } from "@src/stores/appStore.ts";
 import {
@@ -105,15 +106,8 @@ export default function WalletPopover(props: {
 }) {
   const [appState] = useAppStore();
 
-  const preparingSafe = () =>
-    isPreparingSafeRunMode(appState.runMode)
-      ? appState.runMode.PreparingSafe
-      : null;
-  const runModeStatus = createMemo(() =>
-    isRunningRunMode(appState.runMode)
-      ? appState.runMode.Running.funding_status
-      : null
-  );
+  const preparingSafe = () => preparingSafeOf(appState.runMode);
+  const runModeStatus = createMemo(() => fundingStatusOf(appState.runMode));
   const effectiveCredit = createMemo(() =>
     appState.balance ? computeEffectiveCredit(appState.balance) : null
   );

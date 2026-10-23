@@ -7,7 +7,7 @@ import {
 } from "@src/utils/primaryAction.ts";
 import { currentPage, push } from "@src/stores/pageStack.ts";
 import { isControl, resolveMainShortcut } from "@src/utils/shortcuts.ts";
-import { isSwitchingDestination } from "@src/utils/status.ts";
+import { isConnectInFlight } from "@src/utils/status.ts";
 
 /**
  * The main screen's keyboard shortcuts, shown nowhere in the UI. The picker
@@ -21,11 +21,8 @@ export function createMainShortcuts(opts: { openPicker: () => void }): void {
     isMac = platform === "macos";
   });
 
-  const connecting = () => {
-    const status = appState.vpnStatus;
-    return status === "Connecting" || status === "Reconnecting" ||
-      isSwitchingDestination(status, appState.targetDestination);
-  };
+  const connecting = () =>
+    isConnectInFlight(appState.vpnStatus, appState.targetDestination);
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.repeat) return;

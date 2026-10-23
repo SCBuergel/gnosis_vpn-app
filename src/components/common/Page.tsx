@@ -1,4 +1,5 @@
 import { type JSX, onCleanup, onMount } from "solid-js";
+import ChevronIcon from "./ChevronIcon.tsx";
 
 /**
  * A page inside the main window: back button, title, scrolling body. The
@@ -37,18 +38,7 @@ export default function Page(props: {
           class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-surface text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={() => props.onBack()}
         >
-          <svg
-            viewBox="0 0 8 12"
-            class="size-3"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M6.5 1.5L2 6l4.5 4.5" />
-          </svg>
+          <ChevronIcon class="w-3 rotate-90" />
         </button>
         <h1 class="truncate text-xl font-bold text-text-primary">
           {props.title}

@@ -661,3 +661,17 @@ export class VPNService {
     return sorted[0].destination.id;
   }
 }
+
+/** The funding verdict a running daemon reports; null in every other run mode. */
+export function fundingStatusOf(runMode: RunMode | null): FundingStatus | null {
+  return runMode !== null && isRunningRunMode(runMode)
+    ? runMode.Running.funding_status
+    : null;
+}
+
+/** The onboarding state while the daemon waits for funds; null in every other run mode. */
+export function preparingSafeOf(runMode: RunMode | null): PreparingSafe | null {
+  return runMode !== null && isPreparingSafeRunMode(runMode)
+    ? runMode.PreparingSafe
+    : null;
+}

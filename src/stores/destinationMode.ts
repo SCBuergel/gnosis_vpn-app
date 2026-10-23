@@ -502,6 +502,18 @@ export function effectiveActive(
   return candidateId;
 }
 
+/** The destination the main screen is about right now, resolved against the clock. */
+export function activeDestination(
+  state: {
+    mode: DestinationMode;
+    destinations: Record<string, DestinationState>;
+  },
+  now = Date.now(),
+): DestinationState | undefined {
+  const id = effectiveActive(state.mode, now);
+  return id ? state.destinations[id] : undefined;
+}
+
 /** Which label a card wears — "Best Location" is auto's own word, so a selection never wears it. */
 export function cardPhaseFor(model: DestinationMode, id: string): CardPhase {
   const pending = model.mode.mode === "auto" ? model.mode.pending : null;

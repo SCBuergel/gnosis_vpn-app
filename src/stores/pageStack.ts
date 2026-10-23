@@ -45,8 +45,6 @@ export const currentPage = (): PageId | null => {
   return s.length === 0 ? null : s[s.length - 1];
 };
 
-export const pageDepth = (): number => stack().length;
-
 export function push(id: PageId): void {
   setStack((s) => pushPage(s, id));
 }

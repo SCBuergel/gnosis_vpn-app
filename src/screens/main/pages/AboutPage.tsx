@@ -4,13 +4,10 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Row, Section } from "@src/components/common/GroupedList.tsx";
 import { useAppStore } from "@src/stores/appStore.ts";
 import { logWarn } from "@src/utils/appLog.ts";
+import { createSecretReveal } from "@src/utils/secretReveal.ts";
 
 const SOURCE_URL = "https://github.com/gnosis/gnosis_vpn-app";
 const FLAG_ICONS_URL = "https://github.com/lipis/flag-icons";
-
-// Seven quick clicks on the version reveal the component versions.
-const REVEAL_CLICKS = 7;
-const REVEAL_WINDOW_MS = 2000;
 
 async function open(url: string) {
   try {
@@ -29,20 +26,9 @@ export default function AboutPage() {
   const [appState] = useAppStore();
   const [appVersion] = createResource(() => getVersion());
   const [showVersionDetails, setShowVersionDetails] = createSignal(false);
-  let versionClickCount = 0;
-  let lastVersionClickAt = 0;
-
-  const handleVersionClick = () => {
-    const now = Date.now();
-    versionClickCount = now - lastVersionClickAt > REVEAL_WINDOW_MS
-      ? 1
-      : versionClickCount + 1;
-    lastVersionClickAt = now;
-    if (versionClickCount >= REVEAL_CLICKS) {
-      setShowVersionDetails(true);
-      versionClickCount = 0;
-    }
-  };
+  const handleVersionClick = createSecretReveal(() =>
+    setShowVersionDetails(true)
+  );
 
   return (
     <>

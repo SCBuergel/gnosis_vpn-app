@@ -491,13 +491,12 @@ describe("headerStatus", () => {
 });
 
 describe("connectButtonLook", () => {
-  const cancel = { label: "Cancel", variant: "stop" };
-  const disconnect = { label: "Disconnect", variant: "stop" };
+  const cancel = { label: "Cancel" };
+  const disconnect = { label: "Disconnect" };
 
   it("offers Connect while disconnected", () => {
     expect(connectButtonLook("Disconnected", null, false)).toEqual({
       label: "Connect",
-      variant: "primary",
     });
   });
 

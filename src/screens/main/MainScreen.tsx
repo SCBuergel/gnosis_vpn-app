@@ -3,7 +3,6 @@ import {
   createMemo,
   createSignal,
   Match,
-  onCleanup,
   Show,
   Switch,
 } from "solid-js";
@@ -15,7 +14,6 @@ import DestinationHero from "../../components/exitNode/DestinationHero.tsx";
 import type { PickerFrame } from "../../components/exitNode/LocationPicker.tsx";
 import StatusCard from "../../components/status/StatusCard.tsx";
 import ConnectingExplainer from "../../components/status/ConnectingExplainer.tsx";
-import { effectiveActive } from "../../stores/destinationMode.ts";
 import ConnectButton from "../../components/ConnectButton.tsx";
 import { createMainShortcuts } from "./mainShortcuts.ts";
 import {
@@ -29,32 +27,37 @@ import SettingsPage from "./pages/SettingsPage.tsx";
 import SoftwareUpdatePage from "./pages/SoftwareUpdatePage.tsx";
 import AboutPage from "./pages/AboutPage.tsx";
 import AddFundsPage from "./pages/AddFundsPage.tsx";
-import { isRunningRunMode } from "../../services/vpnService.ts";
 import { deriveOverallStatus, type StatusText } from "../../utils/funding.ts";
 import {
   channelMaintenanceWarning,
-  isSwitchingDestination,
+  isConnectInFlight,
 } from "../../utils/status.ts";
 import { endOfLifeMessage } from "../../utils/updateAvailability.ts";
 import { createDeadlineClock } from "../../utils/deadlineClock.ts";
 import Banner from "../../components/common/Banner.tsx";
 import UpdateIcon from "../../components/icons/UpdateIcon.tsx";
 import WarningIcon from "../../components/icons/WarningIcon.tsx";
+import { activeDestination } from "@src/stores/destinationMode.ts";
+import { fundingStatusOf } from "@src/services/vpnService.ts";
+import { createClock } from "@src/utils/clock.ts";
 
 // Module scope — survives screen switches, resets on app restart.
 const [dismissedBalanceStatus, setDismissedBalanceStatus] = createSignal<
   StatusText | null
 >(null);
 
+const pageTitle: Record<PageId, string> = {
+  settings: "Settings",
+  "software-update": "Software update",
+  about: "About Gnosis VPN",
+  "add-funds": "Add funds",
+};
+
 export function MainScreen() {
   const [appState] = useAppStore();
   const [, settingsActions] = useSettingsStore();
 
-  const runModeStatus = createMemo(() =>
-    isRunningRunMode(appState.runMode)
-      ? appState.runMode.Running.funding_status
-      : null
-  );
+  const runModeStatus = createMemo(() => fundingStatusOf(appState.runMode));
   const balanceStatus = createMemo(() =>
     deriveOverallStatus(appState.balance, runModeStatus())
   );
@@ -75,16 +78,11 @@ export function MainScreen() {
       : "Your balance is low";
 
   // The outage age has to tick between status updates.
-  const [nowMs, setNowMs] = createSignal(Date.now());
-  const tick = setInterval(() => setNowMs(Date.now()), 1000);
-  onCleanup(() => clearInterval(tick));
+  const nowMs = createClock(1000);
   const maintenanceWarning = () =>
     channelMaintenanceWarning(appState.runMode, nowMs());
 
-  const activeDestinationState = createMemo(() => {
-    const id = effectiveActive(appState.mode, Date.now());
-    return id ? appState.destinations[id] : undefined;
-  });
+  const activeDestinationState = createMemo(() => activeDestination(appState));
   // The hero registers how to open the picker; Cmd/Ctrl+L goes through it.
   let openPicker: () => void = () => {};
   createMainShortcuts({ openPicker: () => openPicker() });
@@ -103,11 +101,8 @@ export function MainScreen() {
   };
 
   // While a connect is in flight the explainer takes the status card's place.
-  const connectInFlight = () => {
-    const status = appState.vpnStatus;
-    return status === "Connecting" || status === "Reconnecting" ||
-      isSwitchingDestination(status, appState.targetDestination);
-  };
+  const connectInFlight = () =>
+    isConnectInFlight(appState.vpnStatus, appState.targetDestination);
 
   const mainContent = () => (
     <div class="flex w-full flex-col h-full py-6 px-4">
@@ -186,10 +181,7 @@ export function MainScreen() {
             <div class="grid w-full">
               {/* inert: the faded card must not keep a Tab stop while the explainer covers it */}
               <div
-                ref={(el) =>
-                  createEffect(() =>
-                    el.toggleAttribute("inert", connectInFlight())
-                  )}
+                inert={connectInFlight()}
                 class="col-start-1 row-start-1 transition-opacity duration-300"
                 classList={{
                   "opacity-0 pointer-events-none": connectInFlight(),
@@ -212,13 +204,6 @@ export function MainScreen() {
       </div>
     </div>
   );
-
-  const pageTitle: Record<PageId, string> = {
-    settings: "Settings",
-    "software-update": "Software update",
-    about: "About Gnosis VPN",
-    "add-funds": "Add funds",
-  };
 
   return (
     <Show when={currentPage()} keyed fallback={mainContent()}>

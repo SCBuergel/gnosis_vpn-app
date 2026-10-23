@@ -116,10 +116,7 @@ export function headerStatus(
       ? { text: "Connected to · stalled", tone: "stalled" }
       : { text: "Connected to", tone: "connected" };
   }
-  if (
-    status === "Connecting" || status === "Reconnecting" ||
-    isSwitchingDestination(status, state.targetDestination)
-  ) {
+  if (isConnectInFlight(status, state.targetDestination)) {
     return { text: "Connecting to", tone: "connecting" };
   }
   if (status === "WorkerRestarting") {
@@ -136,7 +133,6 @@ export function headerStatus(
 
 export interface ConnectButtonLook {
   label: "Connect" | "Cancel" | "Disconnect";
-  variant: "primary" | "stop";
 }
 
 /** "Disconnect" would imply a usable tunnel, so the whole attempt reads "Cancel". */
@@ -146,17 +142,24 @@ export function connectButtonLook(
   isReconnecting: boolean,
 ): ConnectButtonLook {
   // Restoring a tunnel that existed: the tunnel is what the button gives up, not an attempt.
-  if (isReconnecting) return { label: "Disconnect", variant: "stop" };
-  if (vpnStatus === "Connected") {
-    return { label: "Disconnect", variant: "stop" };
-  }
+  if (isReconnecting) return { label: "Disconnect" };
+  if (vpnStatus === "Connected") return { label: "Disconnect" };
 
   const waitingForRoute = vpnStatus === "Reconnecting" &&
     targetDestination !== null;
   const attemptInFlight = vpnStatus === "Connecting" ||
     isSwitchingDestination(vpnStatus, targetDestination) || waitingForRoute;
-  if (attemptInFlight) return { label: "Cancel", variant: "stop" };
-  return { label: "Connect", variant: "primary" };
+  if (attemptInFlight) return { label: "Cancel" };
+  return { label: "Connect" };
+}
+
+/** A connect attempt is under way: connecting, reconnecting, or switching destinations. */
+export function isConnectInFlight(
+  vpnStatus: string,
+  targetDestination: string | null,
+): boolean {
+  return vpnStatus === "Connecting" || vpnStatus === "Reconnecting" ||
+    isSwitchingDestination(vpnStatus, targetDestination);
 }
 
 /** A switch tears the old tunnel down before the new attempt starts, so it reports as a disconnect. */

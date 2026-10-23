@@ -21,14 +21,14 @@ import CheckUpdateModal from "@src/components/CheckUpdateModal.tsx";
 import HowToUpdateModal from "@src/components/common/HowToUpdateModal.tsx";
 import InstallUpdateModal from "@src/components/InstallUpdateModal.tsx";
 import { useAppStore } from "@src/stores/appStore.ts";
-import { effectiveActive } from "@src/stores/destinationMode.ts";
+import { activeDestination } from "@src/stores/destinationMode.ts";
 import {
   type UpdateChannel,
   useSettingsStore,
 } from "@src/stores/settingsStore.ts";
 import { checkUpdate } from "@src/services/toolkit.ts";
 import { detectChannel } from "@src/utils/version.ts";
-import { setUpdateChecking } from "@src/utils/updateChecker.ts";
+import { setUpdateChecking, updateChecking } from "@src/utils/updateChecker.ts";
 import {
   endOfLifeMessage,
   resolveUpdateBlocker,
@@ -61,7 +61,6 @@ export default function SoftwareUpdatePage() {
   const [appState, appActions] = useAppStore();
   const [settings, settingsActions] = useSettingsStore();
   const [showCheckModal, setShowCheckModal] = createSignal(false);
-  const [checking, setChecking] = createSignal(false);
   const [pendingConnectCheck, setPendingConnectCheck] = createSignal(false);
   const [showInstallModal, setShowInstallModal] = createSignal(false);
   const [installPhase, setInstallPhase] = createSignal<InstallPhase | null>(
@@ -71,7 +70,6 @@ export default function SoftwareUpdatePage() {
   const [showHowTo, setShowHowTo] = createSignal(false);
   const [pendingConnectInstall, setPendingConnectInstall] = createSignal(false);
   const runCheck = async (skipVpn: boolean) => {
-    setChecking(true);
     setUpdateChecking(true);
     try {
       const result = await checkUpdate(skipVpn);
@@ -88,7 +86,6 @@ export default function SoftwareUpdatePage() {
       }
       // TODO: surface other errors in the UI
     } finally {
-      setChecking(false);
       setUpdateChecking(false);
     }
   };
@@ -267,7 +264,7 @@ export default function SoftwareUpdatePage() {
 
   const handleConnectAndCheck = () => {
     setShowCheckModal(false);
-    const id = effectiveActive(appState.mode, Date.now());
+    const id = activeDestination(appState)?.destination.id;
     if (!id) return;
     setPendingConnectCheck(true);
     void appActions.connect(id);
@@ -370,7 +367,7 @@ export default function SoftwareUpdatePage() {
       >
         <UpdateStatusCard
           onCheck={handleCheck}
-          loading={checking()}
+          loading={updateChecking()}
           isUpToDate={isUpToDate()}
           latestVersion={decision().release?.version}
           releaseNotes={decision().release?.release_notes}
@@ -396,7 +393,7 @@ export default function SoftwareUpdatePage() {
           }}
           onConnectAndInstall={() => {
             setShowInstallModal(false);
-            const id = effectiveActive(appState.mode, Date.now());
+            const id = activeDestination(appState)?.destination.id;
             if (!id) return;
             setPendingConnectInstall(true);
             void appActions.connect(id);

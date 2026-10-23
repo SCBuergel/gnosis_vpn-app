@@ -18,6 +18,8 @@ import GnosisVpnLogo from "@src/components/common/GnosisVpnLogo.tsx";
 import Spinner from "@src/components/common/Spinner.tsx";
 import { describeStartupError } from "@src/utils/startupError.ts";
 import { formatDuration } from "@src/utils/exitHealth.ts";
+import { createClock } from "@src/utils/clock.ts";
+import { createSecretReveal } from "@src/utils/secretReveal.ts";
 
 export interface GettingReadyProps {
   /** The service has answered at least once this run; before that the first step waits. */
@@ -86,8 +88,6 @@ const trivia = [
 
 const CYCLE_MS = 9000;
 const FADE_MS = 400;
-const REVEAL_CLICKS = 7;
-const REVEAL_WINDOW_MS = 2000;
 
 /**
  * One screen from launch until the main screen can show: reaching the
@@ -100,9 +100,7 @@ export default function GettingReady(props: GettingReadyProps) {
   const [showDetails, setShowDetails] = createSignal(false);
   const [triviaIndex, setTriviaIndex] = createSignal(0);
   const [triviaVisible, setTriviaVisible] = createSignal(true);
-  const [now, setNow] = createSignal(Date.now());
-  let clickCount = 0;
-  let lastClickAt = 0;
+  const now = createClock(1000);
 
   const steps = (): StepKey[] =>
     props.firstRun
@@ -122,9 +120,8 @@ export default function GettingReady(props: GettingReadyProps) {
   let stepSince = Date.now();
   createEffect(on(current, () => {
     stepSince = Date.now();
-    setNow(stepSince);
   }));
-  const stepSeconds = () => Math.floor((now() - stepSince) / 1000);
+  const stepSeconds = () => Math.max(0, Math.floor((now() - stepSince) / 1000));
 
   const startupError = () =>
     props.error && !props.connected ? describeStartupError(props.error) : null;
@@ -148,15 +145,7 @@ export default function GettingReady(props: GettingReadyProps) {
       : progress;
   };
 
-  const handleVersionClick = () => {
-    const at = Date.now();
-    clickCount = at - lastClickAt > REVEAL_WINDOW_MS ? 1 : clickCount + 1;
-    lastClickAt = at;
-    if (clickCount >= REVEAL_CLICKS) {
-      setShowDetails(true);
-      clickCount = 0;
-    }
-  };
+  const handleVersionClick = createSecretReveal(() => setShowDetails(true));
 
   onMount(() => {
     let fade: ReturnType<typeof setTimeout> | undefined;
@@ -167,10 +156,8 @@ export default function GettingReady(props: GettingReadyProps) {
         setTriviaVisible(true);
       }, FADE_MS);
     }, CYCLE_MS);
-    const clock = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => {
       clearInterval(cycle);
-      clearInterval(clock);
       clearTimeout(fade);
     });
   });

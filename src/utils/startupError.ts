@@ -2,7 +2,7 @@
  * What the splash says when the daemon cannot be reached. The socket errors
  * come from gnosis_vpn-lib's root socket; everything else is shown as is.
  */
-export type Platform = "linux" | "macos" | "windows" | "unknown";
+import { type Platform, platformFromUserAgent } from "@src/utils/platform.ts";
 
 export interface StartupErrorView {
   /** The service is merely stopped: the app keeps polling and recovers by itself. */
@@ -30,7 +30,7 @@ const START_HINT: Record<Platform, string | null> = {
 
 export function describeStartupError(
   message: string,
-  platform: Platform = detectPlatform(),
+  platform: Platform = platformFromUserAgent(),
 ): StartupErrorView {
   if (NOT_RUNNING.test(message)) {
     return {
@@ -60,12 +60,4 @@ export function describeStartupError(
     hint: null,
     raw: message,
   };
-}
-
-export function detectPlatform(): Platform {
-  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
-  if (/windows/i.test(ua)) return "windows";
-  if (/mac os|macintosh/i.test(ua)) return "macos";
-  if (/linux|x11/i.test(ua)) return "linux";
-  return "unknown";
 }

@@ -2,6 +2,7 @@ import { createSignal, type JSX, onCleanup, Show } from "solid-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import AddressQr from "@src/components/address/AddressQr.tsx";
 import Tooltip from "@src/components/common/Tooltip.tsx";
+import CheckIcon from "@src/components/icons/CheckIcon.tsx";
 import { logWarn } from "@src/utils/appLog.ts";
 import type { StatusText } from "@src/utils/funding.ts";
 import { FUNDING_COPY, FUNDING_TOOL_URL } from "@src/utils/fundingCopy.ts";
@@ -13,7 +14,8 @@ import { FUNDING_COPY, FUNDING_TOOL_URL } from "@src/utils/fundingCopy.ts";
 
 const COPIED_MS = 2000;
 
-const statusClass: Record<string, string> = {
+/** Text colour for a balance verdict, shared by every place that prints one. */
+export const STATUS_CLASS: Record<StatusText, string> = {
   Sufficient: "text-text-green",
   Received: "text-text-green",
   Low: "text-text-orange",
@@ -90,7 +92,7 @@ export function TokenRow(props: {
           <span class="text-xs text-text-secondary">now</span>
           <span
             class={`text-xs font-bold ${
-              statusClass[props.status] ?? "text-text-secondary"
+              STATUS_CLASS[props.status] ?? "text-text-secondary"
             }`}
           >
             {props.status}
@@ -182,6 +184,42 @@ export function AddressCard(props: {
           </div>
         </div>
       </Show>
+    </div>
+  );
+}
+
+/** Green box: the transfer landed. */
+export function ArrivalNotice(props: { title: string; detail: string }) {
+  return (
+    <div
+      class="flex items-start gap-2.5 rounded-xl border border-vpn-light-green/40 bg-vpn-light-green/10 px-3 py-2.5"
+      role="status"
+    >
+      <CheckIcon class="mt-0.5 size-4 shrink-0 text-text-green" />
+      <span class="flex flex-col text-sm">
+        <span class="font-bold text-text-green">{props.title}</span>
+        <span class="text-text-green">{props.detail}</span>
+      </span>
+    </div>
+  );
+}
+
+/** Quiet box with a spinner: the app is watching the chain for the transfer. */
+export function WaitingNotice(props: { title: string; detail: string }) {
+  return (
+    <div
+      class="flex items-start gap-2.5 rounded-xl border border-border bg-bg-surface px-3 py-2.5"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        class="mt-0.5 size-4 shrink-0 animate-spin-smooth rounded-full border-2 border-border border-t-text-primary"
+        aria-hidden="true"
+      />
+      <span class="flex flex-col text-sm">
+        <span class="font-bold text-text-primary">{props.title}</span>
+        <span class="text-text-secondary">{props.detail}</span>
+      </span>
     </div>
   );
 }

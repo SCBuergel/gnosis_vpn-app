@@ -10,13 +10,15 @@ import {
 import { Section } from "@src/components/common/GroupedList.tsx";
 import {
   AddressCard,
+  ArrivalNotice,
   exactOrNull,
   NetworkLine,
   TokenRow,
+  WaitingNotice,
 } from "@src/components/funding/FundingPieces.tsx";
 import {
-  isPreparingSafeRunMode,
-  isRunningRunMode,
+  fundingStatusOf,
+  preparingSafeOf,
   VPNService,
 } from "@src/services/vpnService.ts";
 import { useAppStore } from "@src/stores/appStore.ts";
@@ -45,20 +47,14 @@ import {
   type TransferWatch,
   wantsFastPolling,
 } from "@src/utils/transferWatch.ts";
+import { createClock } from "@src/utils/clock.ts";
 
 /** Where to send funds, what to send, and whether they have arrived. */
 export default function AddFundsPage() {
   const [appState] = useAppStore();
 
-  const preparingSafe = () =>
-    isPreparingSafeRunMode(appState.runMode)
-      ? appState.runMode.PreparingSafe
-      : null;
-  const runModeStatus = createMemo(() =>
-    isRunningRunMode(appState.runMode)
-      ? appState.runMode.Running.funding_status
-      : null
-  );
+  const preparingSafe = () => preparingSafeOf(appState.runMode);
+  const runModeStatus = createMemo(() => fundingStatusOf(appState.runMode));
   const address = () =>
     (preparingSafe()?.node_address ?? appState.balance?.info.node_address ??
       "").trim();
@@ -106,11 +102,11 @@ export default function AddFundsPage() {
   };
   createEffect(on(balances, (b) => setWatch((w) => observe(w, b, Date.now()))));
   // The 15 minute fallback needs a clock, not just balance updates.
-  const tick = setInterval(
+  createEffect(on(
+    createClock(10_000),
     () => setWatch((w) => observe(w, balances(), Date.now())),
-    10_000,
-  );
-  onCleanup(() => clearInterval(tick));
+    { defer: true },
+  ));
 
   // Faster balance polling only while waiting; off again when the page is left.
   createEffect(on(() => wantsFastPolling(watch()), (fast) => {
@@ -160,50 +156,14 @@ export default function AddFundsPage() {
       <Switch>
         <Match when={receivedText()}>
           {(text) => (
-            <div
-              class="flex items-start gap-2.5 rounded-xl border border-vpn-light-green/40 bg-vpn-light-green/10 px-3 py-2.5"
-              role="status"
-            >
-              <svg
-                viewBox="0 0 16 16"
-                class="mt-0.5 size-4 shrink-0 text-text-green"
-                aria-hidden="true"
-              >
-                <path
-                  d="M3 8.5l3.2 3.2L13 5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <span class="flex flex-col text-sm">
-                <span class="font-bold text-text-green">{text().title}</span>
-                <span class="text-text-green">{text().detail}</span>
-              </span>
-            </div>
+            <ArrivalNotice title={text().title} detail={text().detail} />
           )}
         </Match>
         <Match when={watch().phase === "waiting"}>
-          <div
-            class="flex items-start gap-2.5 rounded-xl border border-border bg-bg-surface px-3 py-2.5"
-            role="status"
-            aria-live="polite"
-          >
-            <span
-              class="mt-0.5 size-4 shrink-0 animate-spin-smooth rounded-full border-2 border-border border-t-text-primary"
-              aria-hidden="true"
-            />
-            <span class="flex flex-col text-sm">
-              <span class="font-bold text-text-primary">
-                {FUNDING_COPY.waiting.title}
-              </span>
-              <span class="text-text-secondary">
-                {FUNDING_COPY.waiting.detail}
-              </span>
-            </span>
-          </div>
+          <WaitingNotice
+            title={FUNDING_COPY.waiting.title}
+            detail={FUNDING_COPY.waiting.detail}
+          />
         </Match>
         <Match when>
           <p class="text-sm text-text-secondary">{FUNDING_COPY.idle}</p>

@@ -1,7 +1,7 @@
 import { createMemo, Show } from "solid-js";
 import Button, { type ButtonProps } from "./common/Button.tsx";
 import { useAppStore } from "../stores/appStore.ts";
-import { effectiveActive } from "../stores/destinationMode.ts";
+import { activeDestination } from "../stores/destinationMode.ts";
 import {
   primaryActionEnabled,
   runPrimaryAction,
@@ -10,7 +10,7 @@ import { type ConnectButtonLook, connectButtonLook } from "../utils/status.ts";
 import { destinationTitle } from "../utils/destinations.ts";
 import OwlIcon from "./icons/OwlIcon.tsx";
 
-// The look's own variant is for the old full-size button; here Cancel is quiet grey, not red.
+// Cancel is quiet grey: giving up an attempt is not destructive the way a disconnect is.
 const variantOf: Record<ConnectButtonLook["label"], ButtonProps["variant"]> = {
   Connect: "primary",
   Cancel: "neutral",
@@ -28,10 +28,7 @@ export default function ConnectButton() {
     )
   );
 
-  const targetDestinationState = createMemo(() => {
-    const id = effectiveActive(appState.mode, Date.now());
-    return id ? appState.destinations[id] : undefined;
-  });
+  const targetDestinationState = createMemo(() => activeDestination(appState));
 
   const targetTitle = () => {
     const dest = targetDestinationState()?.destination;

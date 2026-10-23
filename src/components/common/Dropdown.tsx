@@ -11,6 +11,7 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import arrowDownIcon from "@assets/icons/arrow-down.svg";
+import ChevronIcon from "./ChevronIcon.tsx";
 
 export type DropdownProps<T> = {
   options: T[];
@@ -268,20 +269,11 @@ export function Dropdown<T>(props: DropdownProps<T>) {
               />
             }
           >
-            <svg
-              viewBox="0 0 18 10"
+            <ChevronIcon
               class={`h-2.5 w-3.5 transition-transform duration-200 ${
                 open() ? "rotate-180" : ""
               }`}
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M17 1L8.46667 9L1 1" />
-            </svg>
+            />
           </Show>
         </button>
       </div>

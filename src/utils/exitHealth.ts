@@ -150,17 +150,6 @@ export function getConnectionQuality(
   return "good";
 }
 
-/** Determine load level from 1-minute load average relative to nproc. */
-export function getLoadLevel(exit: ExitData | null): LoadLevel | null {
-  if (!exit) return null;
-  const { one, nproc } = exit.loadAvg;
-  if (nproc <= 0) return null;
-  const ratio = one / nproc;
-  if (ratio < 0.5) return "low";
-  if (ratio < 0.85) return "medium";
-  return "high";
-}
-
 /** Format load averages as e.g. "0.5 / 1.2 / 0.8 (4 cores)". */
 export function formatLoadAvg(exit: ExitData | null): string | null {
   if (!exit) return null;
@@ -214,11 +203,6 @@ export function formatDuration(diffSec: number): string {
   return rest === 0
     ? `${hours} h`
     : `${hours} h ${String(rest).padStart(2, "0")} min`;
-}
-
-/** Whether the card has route stats to show: anything the walk found. */
-export function hasHealthContent(rhv: RouteHealthView | null): boolean {
-  return rhv?.walk?.found === "Paths";
 }
 
 /** Get the raw hop count from routing. */

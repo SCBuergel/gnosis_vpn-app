@@ -2,6 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { logWarn } from "@src/utils/appLog.ts";
 
+export type Platform = "linux" | "macos" | "windows" | "unknown";
+
+/** The OS from the user agent: synchronous and good enough for wording, unlike `getPlatform`. */
+export function platformFromUserAgent(): Platform {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/windows/i.test(ua)) return "windows";
+  if (/mac os|macintosh/i.test(ua)) return "macos";
+  if (/linux|x11/i.test(ua)) return "linux";
+  return "unknown";
+}
+
 // The frontend has no runtime OS signal of its own; the `get_platform`
 // command exposes Rust's std::env::consts::OS ("macos", "linux", …).
 let cached: Promise<string> | undefined;
