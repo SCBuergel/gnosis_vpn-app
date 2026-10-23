@@ -99,6 +99,8 @@ export interface AppState {
   vpnStatus: string;
   warmupStatus: string;
   syncProgress: number;
+  // Which startup step the daemon is in while the sync screen shows.
+  syncPhase: SyncPhaseIndex | null;
   syncRecoveryReason: string | null;
   isUpdateAvailable: boolean;
   availableVersion: string | null;
@@ -157,6 +159,7 @@ function initialState(): AppState {
     vpnStatus: "ServiceUnavailable",
     warmupStatus: "",
     syncProgress: 0,
+    syncPhase: null,
     syncRecoveryReason: null,
     isUpdateAvailable: false,
     availableVersion: null,
@@ -349,7 +352,13 @@ export function createAppStore(): AppStoreTuple {
   };
 
   const processStatusResponse = (response: StatusResponse) => {
-    const [screen, warmupStatus, recoveryReason] = selectScreen(response);
+    const freshNode = state.balance !== null &&
+      state.balance.channels_out === 0n;
+    const [screen, warmupStatus, recoveryReason] = selectScreen(
+      response,
+      freshNode,
+    );
+    setState("syncPhase", detectSyncPhase(response));
     if (isWarmupRunMode(response.run_mode)) {
       const lastError = response.run_mode.Warmup.last_error;
       // The daemon retries warmup; only outside the sync screen is that fatal.

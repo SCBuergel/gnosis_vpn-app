@@ -11,7 +11,12 @@ import type {
   RouteHealthView,
 } from "@src/services/vpnService.ts";
 import { useAppStore } from "@src/stores/appStore.ts";
-import { getExitData } from "@src/utils/destinations.ts";
+import { getExitData, rankContext } from "@src/utils/destinations.ts";
+import {
+  canBeFirstConnect,
+  FIRST_CONNECT,
+  needsFirstConnect,
+} from "@src/utils/firstConnect.ts";
 import {
   type ConnectionQuality,
   formatExitHealthStatus,
@@ -254,6 +259,23 @@ export default function StatusCard(
       };
     }
     const verdict = getRouteVerdict(rh, exit());
+    if (
+      verdict === "no-route" && canBeFirstConnect(props.destinationState) &&
+      needsFirstConnect(
+        appState.balance,
+        appState.destinations,
+        rankContext(appState),
+      )
+    ) {
+      return {
+        prefix: "Network status:",
+        text: FIRST_CONNECT.headline,
+        class: statusColorClass.green,
+        bars: 0,
+        tone: "green" as BarTone,
+        pulsing: false,
+      };
+    }
     const bars = verdict === "ready" ? 3 : verdict === "weak" ? 1 : 0;
     const tone: BarTone = verdict === "ready" ? "green" : "amber";
     return {

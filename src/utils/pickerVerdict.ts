@@ -10,6 +10,7 @@ import {
   formatExitHealthStatus,
   getRouteVerdict,
 } from "@src/utils/exitHealth.ts";
+import { FIRST_CONNECT } from "@src/utils/firstConnect.ts";
 
 /**
  * The picker's grade: `routeGrade`, except that a destination the daemon has
@@ -69,6 +70,8 @@ export function pickerVerdict(
   grade: RouteGrade,
   routeHealth: RouteHealthView | null,
   exit: ExitData | null,
+  // The node has no channels yet: a dead end today is where the first connect goes.
+  firstConnect = false,
 ): PickerVerdict {
   switch (grade.kind) {
     case "measured":
@@ -83,6 +86,7 @@ export function pickerVerdict(
       }
       const verdict = getRouteVerdict(routeHealth, exit);
       if (verdict === "checking") return CHECKING;
+      if (verdict === "no-route" && firstConnect) return FIRST_CONNECT;
       return {
         headline: formatExitHealthStatus(routeHealth, exit),
         context: verdict === "full" ? FULL_CONTEXT : UNREACHABLE_CONTEXT,

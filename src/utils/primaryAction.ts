@@ -6,6 +6,10 @@ import {
   rankContext,
 } from "@src/utils/destinations.ts";
 import { logError } from "@src/utils/appLog.ts";
+import {
+  canBeFirstConnect,
+  needsFirstConnect,
+} from "@src/utils/firstConnect.ts";
 
 type PrimaryActions = {
   connect: (targetId: string) => Promise<void>;
@@ -17,11 +21,13 @@ export function primaryActionEnabled(appState: AppState): boolean {
   if (appState.isLoading) return false;
   if (isVpnActive(appState.vpnStatus, appState.targetDestination)) return true;
   const id = effectiveActive(appState.mode, Date.now());
+  const target = id ? appState.destinations[id] : undefined;
+  const context = rankContext(appState);
   // Selectable, not ready: a weak route the user picked deliberately must still connect.
-  return isSelectable(
-    id ? appState.destinations[id] : undefined,
-    rankContext(appState),
-  );
+  if (isSelectable(target, context)) return true;
+  // A node without channels connects to open them; nothing is routable before that.
+  return needsFirstConnect(appState.balance, appState.destinations, context) &&
+    canBeFirstConnect(target);
 }
 
 /** The Connect button's action, shared with the Enter shortcut. */

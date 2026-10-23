@@ -243,14 +243,36 @@ export function Dropdown<T>(props: DropdownProps<T>) {
             }
           }}
         >
-          <img
-            src={arrowDownIcon}
-            class={`opacity-90 ${props.size === "lg" ? "w-5 h-5" : "w-4 h-4"} ${
-              props.size === "compact" ? "dark:invert-0 invert" : ""
-            } transition-transform duration-200 ${open() ? "rotate-180" : ""}`}
-            alt="dropdown"
-            aria-hidden="true"
-          />
+          <Show
+            when={props.size === "compact"}
+            fallback={
+              <img
+                src={arrowDownIcon}
+                class={`opacity-90 ${
+                  props.size === "lg" ? "w-5 h-5" : "w-4 h-4"
+                } transition-transform duration-200 ${
+                  open() ? "rotate-180" : ""
+                }`}
+                alt="dropdown"
+                aria-hidden="true"
+              />
+            }
+          >
+            <svg
+              viewBox="0 0 18 10"
+              class={`h-2.5 w-3.5 transition-transform duration-200 ${
+                open() ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17 1L8.46667 9L1 1" />
+            </svg>
+          </Show>
         </button>
       </div>
 

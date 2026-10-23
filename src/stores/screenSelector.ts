@@ -70,6 +70,8 @@ export function detectSyncPhase(
 /** Picks the screen for one app run; the sync screen is only shown on the way to main. */
 export function createScreenSelector(): (
   status: StatusResponse,
+  // A node without payment channels never finds a route before its first connect: do not wait for one.
+  freshNode?: boolean,
 ) => ScreenChoice {
   let initialDelay:
     | { delayingSince: number }
@@ -79,7 +81,10 @@ export function createScreenSelector(): (
   let syncScreenSpent = false;
   let safeDeployStarted = false;
 
-  return function selectScreen(status: StatusResponse): ScreenChoice {
+  return function selectScreen(
+    status: StatusResponse,
+    freshNode = false,
+  ): ScreenChoice {
     const runMode = status.run_mode;
     if (runMode === "Shutdown") {
       return [AppScreen.Main, "Shutdown", null];
@@ -120,6 +125,10 @@ export function createScreenSelector(): (
     // delay initial screen as long as no interaction makes sense
     const delay = findDelayReason(status);
     if (!delay) return moveOn();
+    if (freshNode) {
+      logWarn(`Initial sync "${delay}" on a node without channels, moving on`);
+      return moveOn();
+    }
     // delay proposed and never ran - start the delay
     if ("neverRan" in initialDelay) {
       initialDelay = { delayingSince: Date.now() };

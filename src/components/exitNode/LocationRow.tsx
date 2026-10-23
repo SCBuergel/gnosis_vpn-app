@@ -10,6 +10,10 @@ import {
   rankContext,
 } from "@src/utils/destinations.ts";
 import { pickerGrade, pickerVerdict } from "@src/utils/pickerVerdict.ts";
+import {
+  canBeFirstConnect,
+  needsFirstConnect,
+} from "@src/utils/firstConnect.ts";
 import Flag from "../Flag.tsx";
 import CardTooltip from "./CardTooltip.tsx";
 import RouteTooltip from "./RouteTooltip.tsx";
@@ -37,7 +41,15 @@ export default function LocationRow(props: {
     pickerGrade(props.destinationState, exit(), rankContext(appState))
   );
   const routeHealth = () => props.destinationState.route_health ?? null;
-  const verdict = () => pickerVerdict(grade(), routeHealth(), exit());
+  const firstConnect = () =>
+    canBeFirstConnect(props.destinationState) &&
+    needsFirstConnect(
+      appState.balance,
+      appState.destinations,
+      rankContext(appState),
+    );
+  const verdict = () =>
+    pickerVerdict(grade(), routeHealth(), exit(), firstConnect());
   const connected = () =>
     appState.connected?.destination_id === destination().id;
   const tunnelRtt = () =>
@@ -45,7 +57,8 @@ export default function LocationRow(props: {
   // The live destination stays pickable: its tunnel exists and the slot it fills is ours.
   const pickable = () =>
     props.current ||
-    isSelectable(props.destinationState, rankContext(appState));
+    isSelectable(props.destinationState, rankContext(appState)) ||
+    firstConnect();
   const accessibleName = () =>
     [
       destinationTitle(destination()),

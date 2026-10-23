@@ -79,6 +79,8 @@ function mapStoreToScreenProps(screen: ValidScreen, state: AppState) {
     case "synchronization":
       return {
         syncProgress: state.syncProgress,
+        phase: state.syncPhase,
+        statusLine: state.warmupStatus,
         recoveryReason: state.syncRecoveryReason,
       };
     case "main":
