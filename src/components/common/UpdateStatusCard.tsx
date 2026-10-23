@@ -126,10 +126,7 @@ export default function UpdateStatusCard(props: UpdateStatusCardProps) {
               </span>
             }
           >
-            <span
-              class="truncate text-xs text-text-red"
-              title={props.installError ?? undefined}
-            >
+            <span class="break-words text-xs text-text-red">
               Update failed — {props.installError}
             </span>
           </Show>
@@ -144,7 +141,7 @@ export default function UpdateStatusCard(props: UpdateStatusCardProps) {
             <Show when={props.releaseNotes}>
               <button
                 type="button"
-                class="shrink-0 underline"
+                class="shrink-0 rounded-sm underline focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
                 onClick={() => setShowChangelog(true)}
               >
                 changelog
@@ -179,7 +176,7 @@ export default function UpdateStatusCard(props: UpdateStatusCardProps) {
           </div>
           <button
             type="button"
-            class="h-10 rounded-lg border border-border bg-transparent px-4 text-sm font-bold text-text-primary transition-colors hover:bg-darken"
+            class="h-10 rounded-lg border border-border bg-transparent px-4 text-sm font-bold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
             onClick={() => setShowChangelog(false)}
           >
             Close

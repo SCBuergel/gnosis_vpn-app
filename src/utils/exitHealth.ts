@@ -210,10 +210,10 @@ export function getHopCount(routing: number): number {
   return routing;
 }
 
-/** Format routing as e.g. "1-hop" */
+/** Format routing as e.g. "1 hop" */
 export function formatRouting(routing: number): string {
   const n = getHopCount(routing);
-  return n === 1 ? "1-hop" : `${n}-hops`;
+  return n === 1 ? "1 hop" : `${n} hops`;
 }
 
 /** Largest hop count across all available destinations, minimum 1. */

@@ -120,11 +120,11 @@ export function headerStatus(
     return { text: "Connecting to", tone: "connecting" };
   }
   if (status === "WorkerRestarting") {
-    return { text: "Restarting...", tone: "restarting" };
+    return { text: "Restarting…", tone: "restarting" };
   }
   if (status === "ServiceUnavailable") {
     return {
-      text: state.isLoading ? "Loading..." : "Service unavailable",
+      text: state.isLoading ? "Loading…" : "Service unavailable",
       tone: "unavailable",
     };
   }

@@ -7,6 +7,7 @@ import {
   untrack,
 } from "solid-js";
 import { Portal } from "solid-js/web";
+import { createUniqueId } from "solid-js";
 import { gateOnWindowFocus } from "@src/utils/windowFocus.ts";
 
 const MARGIN = 8; // min gap from viewport edge
@@ -35,7 +36,12 @@ export default function Tooltip(props: {
   // The element the bubble hangs on when it is not the whole trigger, e.g. one
   // cell of a row that shows the tooltip wherever it is hovered.
   anchor?: () => HTMLElement | null | undefined;
+  // The trigger takes keyboard focus, so the explanation is not hover-only;
+  // `description` is what a screen reader gets for it.
+  focusable?: boolean;
+  description?: string;
 }) {
+  const descriptionId = createUniqueId();
   const [visible, setVisible] = createSignal(false);
   const [triggerRect, setTriggerRect] = createSignal<DOMRect | null>(null);
   const [side, setSide] = createSignal<Side>("top");
@@ -137,6 +143,10 @@ export default function Tooltip(props: {
     <div
       ref={triggerRef}
       role={props.triggerRole}
+      tabindex={props.focusable ? 0 : undefined}
+      aria-describedby={props.focusable && props.description
+        ? descriptionId
+        : undefined}
       class={`relative inline-flex ${props.triggerClass ?? "w-fit"}`}
       onMouseEnter={show}
       onMouseLeave={hide}
@@ -144,6 +154,10 @@ export default function Tooltip(props: {
       onFocusOut={hide}
     >
       {props.children}
+      {/* Always in the DOM so the description resolves on focus; the portalled bubble mounts too late for that. */}
+      <Show when={props.focusable && props.description}>
+        <span id={descriptionId} class="sr-only">{props.description}</span>
+      </Show>
       <Show when={visible()}>
         <Portal mount={document.body}>
           <div

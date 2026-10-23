@@ -1,4 +1,4 @@
-import { batch, createEffect, createRoot } from "solid-js";
+import { batch, createEffect, createRoot, on } from "solid-js";
 import { createStore, reconcile, type Store } from "solid-js/store";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -213,6 +213,7 @@ export function createAppStore(): AppStoreTuple {
   // Without this a refusal would be re-asked every poll and `measuring` would hold auto's countdown forever.
   const firstPassRefused = new Set<string>();
   const firstPassTimeouts = new Map<string, number>();
+  let quickProbes = IDLE_SCHEDULE;
   let pendingModeAppState: ModeAppState | undefined;
 
   // Creates once, then only mirrors — must never call applyStatusUpdate here, or this effect (which reads destinationMode.model) retriggers itself forever.
@@ -233,9 +234,20 @@ export function createAppStore(): AppStoreTuple {
     );
   });
 
+  // The fast status poll is the list's: it follows `listOpen` whoever changes it,
+  // the user closing it, a connection we did not issue, or a reset after an error.
+  createEffect(on(() => state.mode.listOpen, (open, previous) => {
+    if (previous === undefined || open === previous) return;
+    VPNService.setStatusPollFast(open).catch((error) => logWarn(`${error}`));
+    if (!open) quickProbes = IDLE_SCHEDULE;
+  }));
+
   const criticalError = (message: string) => {
     // status errors repeat every poll tick; log only when the message changes
     if (state.error !== message) logError(message);
+    // A daemon that comes back starts the first pass afresh.
+    firstPassRefused.clear();
+    firstPassTimeouts.clear();
     const savedServiceInfo = state.serviceInfo;
     // The toolkit probe does not go through the daemon (it reads the version
     // file itself), so a daemon error says nothing about its result: keep it.
@@ -304,31 +316,29 @@ export function createAppStore(): AppStoreTuple {
     setState("vpnStatus", deriveVPNStatus(response));
     setState("availableDestinations", availableDestinations);
 
-    const measuring = destinationMode !== undefined &&
-      !destinationMode.model.listOpen &&
-      wantsFirstPass(
-        {
-          availableDestinations,
-          destinations,
-          connected: response.connected,
-          connecting: response.connecting,
-          reconnecting: response.reconnecting,
-          probe: response.probe,
-        },
-        effectiveActive(destinationMode.model, Date.now()),
-        firstPassRefused,
-      );
-    setState("measuring", measuring);
-    pendingModeAppState = {
+    const modeStatus = {
       availableDestinations,
       destinations,
       connected: response.connected,
       connecting: response.connecting,
       reconnecting: response.reconnecting,
       probe: response.probe,
-      measuring,
     };
+    const measuringFor = (): boolean =>
+      destinationMode !== undefined &&
+      !destinationMode.model.listOpen &&
+      wantsFirstPass(
+        modeStatus,
+        effectiveActive(destinationMode.model, Date.now()),
+        firstPassRefused,
+      );
+    // The model's hold input is judged against the active it has now; the
+    // active it picks from this update decides what the hero says.
+    pendingModeAppState = { ...modeStatus, measuring: measuringFor() };
     destinationMode?.applyStatusUpdate(pendingModeAppState);
+    const measuring = measuringFor();
+    pendingModeAppState.measuring = measuring;
+    setState("measuring", measuring);
     maybeConnectOnStartup(pendingModeAppState);
     reconcileProbe(pendingModeAppState);
     runQuickProbes(pendingModeAppState);
@@ -369,8 +379,6 @@ export function createAppStore(): AppStoreTuple {
     ensureProbe(id, Date.now());
   };
 
-  let quickProbes = IDLE_SCHEDULE;
-
   /** One quick probe at a time while the list is open, or once over the never-measured exits while idle; see docs/destinationMode.md, Probing. */
   const runQuickProbes = (status: ModeAppState) => {
     if (!destinationMode) return;
@@ -381,11 +389,7 @@ export function createAppStore(): AppStoreTuple {
       wantsFirstPass(status, activeId, firstPassRefused);
     if (!listOpen && !firstPass) return;
     const lost = timedOutProbe(quickProbes, now);
-    if (lost !== null) {
-      const attempts = (firstPassTimeouts.get(lost) ?? 0) + 1;
-      firstPassTimeouts.set(lost, attempts);
-      if (attempts >= FIRST_PASS_ATTEMPTS) firstPassRefused.add(lost);
-    }
+    if (lost !== null) giveUpEventually(lost);
     const next = nextQuickProbe(quickProbes, status, activeId, now, {
       unmeasuredOnly: firstPass,
       exclude: firstPass ? firstPassRefused : undefined,
@@ -397,16 +401,31 @@ export function createAppStore(): AppStoreTuple {
       .then((response) => {
         const accepted = response.type === "Checking";
         quickProbes = quickProbeAnswered(quickProbes, id, accepted);
-        if (!accepted) {
-          if (firstPass) firstPassRefused.add(id);
-          logInfo(`Quick probe ${id}: ${response.type}`);
+        if (accepted) return;
+        logInfo(`Quick probe ${id}: ${response.type}`);
+        if (!firstPass) return;
+        // A refusal is final for the session; "not now" (NotReady, Already*) is retried, within bounds.
+        if (
+          response.type === "UnableToProbe" ||
+          response.type === "DestinationNotFound"
+        ) {
+          firstPassRefused.add(id);
+        } else {
+          giveUpEventually(id);
         }
       })
       .catch((error) => {
         quickProbes = quickProbeAnswered(quickProbes, id, false);
-        if (firstPass) firstPassRefused.add(id);
+        if (firstPass) giveUpEventually(id);
         logWarn(`Quick probe ${id} failed: ${error}`);
       });
+  };
+
+  /** A lost or deferred probe counts as an attempt; after FIRST_PASS_ATTEMPTS the pass stops asking. */
+  const giveUpEventually = (id: string) => {
+    const attempts = (firstPassTimeouts.get(id) ?? 0) + 1;
+    firstPassTimeouts.set(id, attempts);
+    if (attempts >= FIRST_PASS_ATTEMPTS) firstPassRefused.add(id);
   };
 
   // One shot per launch, like preferredLocation: spent once a session is live or something is ready to connect.
@@ -725,13 +744,10 @@ export function createAppStore(): AppStoreTuple {
     dragStarted: () => destinationMode?.applyUserInput({ type: "dragStarted" }),
     destinationListOpened: () => {
       destinationMode?.applyUserInput({ type: "listOpened" });
-      VPNService.setStatusPollFast(true).catch((error) => logWarn(`${error}`));
       if (pendingModeAppState) runQuickProbes(pendingModeAppState);
     },
     destinationListClosed: (picked: string | null) => {
       destinationMode?.applyUserInput({ type: "listClosed", picked });
-      VPNService.setStatusPollFast(false).catch((error) => logWarn(`${error}`));
-      quickProbes = IDLE_SCHEDULE;
     },
     refreshToolkit,
   } as const;

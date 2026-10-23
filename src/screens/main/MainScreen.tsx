@@ -3,6 +3,7 @@ import {
   createMemo,
   createSignal,
   Match,
+  on,
   Show,
   Switch,
 } from "solid-js";
@@ -11,7 +12,7 @@ import { useSettingsStore } from "../../stores/settingsStore.ts";
 import StatusHeader from "../../components/status/StatusHeader.tsx";
 import Navigation from "../../components/Navigation.tsx";
 import DestinationHero from "../../components/exitNode/DestinationHero.tsx";
-import type { PickerFrame } from "../../components/exitNode/LocationPicker.tsx";
+import type { ColumnFrame } from "../../components/common/popover.tsx";
 import StatusCard from "../../components/status/StatusCard.tsx";
 import ConnectingExplainer from "../../components/status/ConnectingExplainer.tsx";
 import ConnectButton from "../../components/ConnectButton.tsx";
@@ -90,7 +91,7 @@ export function MainScreen() {
   // The picker spans the content column (the status card's width) and stops above the primary button.
   let columnRef: HTMLElement | undefined;
   let buttonRef: HTMLDivElement | undefined;
-  const pickerFrame = (): PickerFrame | null => {
+  const pickerFrame = (): ColumnFrame | null => {
     if (!columnRef || !buttonRef) return null;
     const column = columnRef.getBoundingClientRect();
     return {
@@ -108,7 +109,7 @@ export function MainScreen() {
     <div class="flex w-full flex-col h-full py-6 px-4">
       <div class="flex flex-row justify-between z-60">
         <StatusHeader />
-        <Navigation pickerFrame={pickerFrame} />
+        <Navigation columnFrame={pickerFrame} />
       </div>
 
       {/* In flow, not floating: a notice moves the hero down rather than covering the flag. */}
@@ -178,7 +179,7 @@ export function MainScreen() {
         <Show when={activeDestinationState()}>
           {(ds) => (
             // Both share one grid cell so the swap cross-fades in place.
-            <div class="grid w-full">
+            <div class="grid w-full grid-cols-[minmax(0,1fr)]">
               {/* inert: the faded card must not keep a Tab stop while the explainer covers it */}
               <div
                 inert={connectInFlight()}
@@ -204,6 +205,15 @@ export function MainScreen() {
       </div>
     </div>
   );
+
+  // Back from a page: focus returns to the button that opens pages, once the main content is back.
+  createEffect(on(currentPage, (page, previous) => {
+    if (page !== null || !previous) return;
+    queueMicrotask(() =>
+      document.querySelector<HTMLElement>('button[aria-label="Settings"]')
+        ?.focus()
+    );
+  }));
 
   return (
     <Show when={currentPage()} keyed fallback={mainContent()}>

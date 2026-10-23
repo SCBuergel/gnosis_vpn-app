@@ -25,8 +25,13 @@ export default function Page(props: {
       props.onBack();
     }
   };
+  let titleRef: HTMLHeadingElement | undefined;
   // Capture: the main screen's own Esc handling (cancel a connect) must not see it.
-  onMount(() => document.addEventListener("keydown", onKeyDown, true));
+  onMount(() => {
+    document.addEventListener("keydown", onKeyDown, true);
+    // The new view announces itself and Tab starts from its top.
+    titleRef?.focus();
+  });
   onCleanup(() => document.removeEventListener("keydown", onKeyDown, true));
 
   return (
@@ -40,7 +45,11 @@ export default function Page(props: {
         >
           <ChevronIcon class="w-3 rotate-90" />
         </button>
-        <h1 class="truncate text-xl font-bold text-text-primary">
+        <h1
+          ref={titleRef}
+          tabIndex={-1}
+          class="truncate text-xl font-bold text-text-primary focus:outline-none"
+        >
           {props.title}
         </h1>
       </header>

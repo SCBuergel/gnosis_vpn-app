@@ -44,7 +44,7 @@ export default function UnreachableDialog(props: { onClose: () => void }) {
         aria-describedby="dialog-desc-unreachable"
       >
         <h2 id="dialog-title-unreachable" class="sr-only">
-          Node Unreachable
+          Location unreachable
         </h2>
         <div class="flex items-start gap-3 mb-4">
           <img
@@ -54,7 +54,7 @@ export default function UnreachableDialog(props: { onClose: () => void }) {
             aria-hidden="true"
           />
           <p id="dialog-desc-unreachable" class="text-text-primary text-sm">
-            The node is currently unreachable. Please select another Exit Node.
+            Can't be reached right now. Pick another location.
           </p>
         </div>
         <Button

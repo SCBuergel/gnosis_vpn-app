@@ -1,4 +1,5 @@
 import { type JSX, Show } from "solid-js";
+import ChevronIcon from "./ChevronIcon.tsx";
 
 /** A small-caps section header and its inset card of rows. */
 export function Section(props: { title: string; children: JSX.Element }) {
@@ -64,18 +65,7 @@ export function Row(props: {
         onClick={() => props.onClick?.()}
       >
         {content}
-        <svg
-          viewBox="0 0 8 12"
-          class="size-3 shrink-0 text-text-muted"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M1.5 1.5L6 6l-4.5 4.5" />
-        </svg>
+        <ChevronIcon class="w-3 -rotate-90 text-text-muted" />
       </button>
     </Show>
   );

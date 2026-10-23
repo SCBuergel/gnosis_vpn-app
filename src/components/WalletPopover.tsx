@@ -3,7 +3,6 @@ import {
   createMemo,
   type JSX,
   Match,
-  onCleanup,
   onMount,
   Show,
   Switch,
@@ -38,11 +37,16 @@ import { isWindowFocused } from "@src/utils/windowFocus.ts";
 import Button from "./common/Button.tsx";
 import Tooltip from "./common/Tooltip.tsx";
 import WarningIcon from "./icons/WarningIcon.tsx";
-import type { PickerFrame } from "./exitNode/LocationPicker.tsx";
+import {
+  type ColumnFrame,
+  createPopoverDismiss,
+  POPOVER_ARROW_PX,
+  POPOVER_GAP_PX,
+  POPOVER_MARGIN_PX,
+  POPOVER_SURFACE_CLASS,
+  PopoverArrow,
+} from "./common/popover.tsx";
 
-const MARGIN_PX = 8;
-const GAP_PX = 10;
-const ARROW_PX = 12;
 const DEFAULT_WIDTH_PX = 296;
 
 const statusClass: Record<string, string> = {
@@ -83,6 +87,8 @@ function BalanceRow(props: {
       <div class="flex flex-col items-end">
         <Tooltip
           content={<span>{props.exact}</span>}
+          focusable
+          description={props.exact}
           position="auto"
           align="end"
         >
@@ -100,7 +106,7 @@ function BalanceRow(props: {
 /** The wallet icon's popover: both balances, the service's state in one line, and the way to add funds. */
 export default function WalletPopover(props: {
   anchor: DOMRect;
-  frame: PickerFrame | null;
+  frame: ColumnFrame | null;
   onClose: () => void;
   onAddFunds: () => void;
 }) {
@@ -139,7 +145,7 @@ export default function WalletPopover(props: {
         return { text: "Service unavailable", critical: true };
       }
       if (status === "DeployingSafe") {
-        return { text: "Preparing service", critical: false };
+        return { text: "Creating your Safe", critical: false };
       }
       if (isWarmupRunMode(appState.runMode)) {
         return { text: "Syncing in progress", critical: false };
@@ -161,30 +167,12 @@ export default function WalletPopover(props: {
   );
 
   let popoverRef: HTMLDivElement | undefined;
+  let addFundsRef: HTMLButtonElement | undefined;
+  // Focus moves into the dialog, as it does into the picker's search field.
+  onMount(() => addFundsRef?.focus());
 
   // Esc, a press outside, or the window losing focus closes it.
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Escape") return;
-    e.stopPropagation();
-    props.onClose();
-  };
-  const onPointerDown = (e: PointerEvent) => {
-    const target = e.target instanceof Node ? e.target : null;
-    if (target && popoverRef?.contains(target)) return;
-    props.onClose();
-  };
-  onMount(() => {
-    document.addEventListener("keydown", onKeyDown, true);
-    // next tick: the opening click must not count as outside
-    setTimeout(
-      () => document.addEventListener("pointerdown", onPointerDown),
-      0,
-    );
-  });
-  onCleanup(() => {
-    document.removeEventListener("keydown", onKeyDown, true);
-    document.removeEventListener("pointerdown", onPointerDown);
-  });
+  createPopoverDismiss({ popover: () => popoverRef, onClose: props.onClose });
   createEffect(() => {
     if (!isWindowFocused()) props.onClose();
   });
@@ -196,11 +184,11 @@ export default function WalletPopover(props: {
   const left = () => {
     const rightEdge = props.frame
       ? props.frame.left + props.frame.width
-      : globalThis.innerWidth - MARGIN_PX;
-    return Math.max(MARGIN_PX, rightEdge - width());
+      : globalThis.innerWidth - POPOVER_MARGIN_PX;
+    return Math.max(POPOVER_MARGIN_PX, rightEdge - width());
   };
-  const top = () => props.anchor.bottom + GAP_PX;
-  const arrowLeft = () => anchorX() - left() - ARROW_PX / 2;
+  const top = () => props.anchor.bottom + POPOVER_GAP_PX;
+  const arrowLeft = () => anchorX() - left() - POPOVER_ARROW_PX / 2;
 
   return (
     <Portal>
@@ -208,18 +196,14 @@ export default function WalletPopover(props: {
         ref={popoverRef}
         role="dialog"
         aria-label="Balance"
-        class="fixed z-100 flex flex-col gap-2 rounded-xl border border-border bg-bg-surface p-4 shadow-xl transition-[opacity,transform] duration-150 ease-out starting:-translate-y-1 starting:opacity-0"
+        class={`${POPOVER_SURFACE_CLASS} gap-2 p-4`}
         style={{
           left: `${left()}px`,
           top: `${top()}px`,
           width: `${width()}px`,
         }}
       >
-        <span
-          class="absolute -top-[7px] size-3 rotate-45 border-l border-t border-border bg-bg-surface"
-          style={{ left: `${arrowLeft()}px` }}
-          aria-hidden="true"
-        />
+        <PopoverArrow left={arrowLeft()} />
         <h2 class="text-base font-bold text-text-primary">Balance</h2>
         <Show when={stateLine()}>
           {(line) => (
@@ -268,7 +252,13 @@ export default function WalletPopover(props: {
             </div>
           </Match>
         </Switch>
-        <Button size="main" onClick={props.onAddFunds}>Add funds…</Button>
+        <Button
+          ref={(el) => (addFundsRef = el)}
+          size="main"
+          onClick={props.onAddFunds}
+        >
+          Add funds…
+        </Button>
       </div>
     </Portal>
   );

@@ -482,11 +482,11 @@ describe("headerStatus", () => {
 
   it("keeps the service texts", () => {
     expect(headerStatus(at("WorkerRestarting")))
-      .toEqual({ text: "Restarting...", tone: "restarting" });
+      .toEqual({ text: "Restarting…", tone: "restarting" });
     expect(headerStatus(at("ServiceUnavailable")))
       .toEqual({ text: "Service unavailable", tone: "unavailable" });
     expect(headerStatus(at("ServiceUnavailable", { isLoading: true })))
-      .toEqual({ text: "Loading...", tone: "unavailable" });
+      .toEqual({ text: "Loading…", tone: "unavailable" });
   });
 });
 

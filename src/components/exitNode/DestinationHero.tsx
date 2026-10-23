@@ -12,7 +12,8 @@ import Flag from "../Flag.tsx";
 import GlobeIcon from "../icons/GlobeIcon.tsx";
 import Spinner from "@src/components/common/Spinner.tsx";
 import Tooltip from "../common/Tooltip.tsx";
-import LocationPicker, { type PickerFrame } from "./LocationPicker.tsx";
+import LocationPicker from "./LocationPicker.tsx";
+import type { ColumnFrame } from "../common/popover.tsx";
 import SwitchSpinner from "./SwitchSpinner.tsx";
 
 /** The destination Connect targets: flag, name, country, and the way to another one. */
@@ -20,7 +21,7 @@ export default function DestinationHero(props: {
   // Hands the parent a way to open the picker, for the keyboard shortcut.
   registerOpenPicker?: (open: () => void) => void;
   // The column the picker spans and where it must stop; measured when it opens.
-  pickerFrame?: () => PickerFrame | null;
+  pickerFrame?: () => ColumnFrame | null;
 }) {
   const [appState, appActions] = useAppStore();
 
@@ -47,7 +48,7 @@ export default function DestinationHero(props: {
 
   // Where the Change location button sits: the picker hangs under it.
   const [anchor, setAnchor] = createSignal<DOMRect | null>(null);
-  const [frame, setFrame] = createSignal<PickerFrame | null>(null);
+  const [frame, setFrame] = createSignal<ColumnFrame | null>(null);
   let changeButtonRef: HTMLButtonElement | undefined;
 
   const closeList = (picked: string | null) => {
@@ -78,7 +79,7 @@ export default function DestinationHero(props: {
 
             <div class="flex flex-col items-center gap-1 py-4">
               <span class="text-xl font-bold text-text-primary">
-                No exit nodes available
+                No locations available
               </span>
               <span class="text-xs text-text-secondary">
                 Checking for new ones…

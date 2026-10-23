@@ -68,8 +68,13 @@ const PHASE_OF: Record<Exclude<StepKey, "service">, SyncPhaseIndex> = {
   routes: 2,
 };
 
-/** After this long on one step, the wait gets a word of reassurance. */
-const SLOW_AFTER_SEC = 60;
+/** After this long on one step, the wait gets a word of reassurance; the Safe deploys on-chain and is slower. */
+const SLOW_AFTER_SEC: Record<StepKey, number> = {
+  service: Infinity,
+  safe: 150,
+  node: 60,
+  routes: 60,
+};
 /** The route step shows how long it has been going once it is no longer instant. */
 const SHOW_TIMER_AFTER_SEC = 5;
 
@@ -127,9 +132,11 @@ export default function GettingReady(props: GettingReadyProps) {
     props.error && !props.connected ? describeStartupError(props.error) : null;
 
   const estimate = () => {
+    const error = startupError();
+    if (error && !error.waiting) return "";
     if (!props.connected) return "One moment.";
     return props.firstRun
-      ? "This happens once per node and takes a couple of minutes."
+      ? "This happens once per node and takes a minute or two."
       : "Takes a few seconds.";
   };
 
@@ -172,7 +179,10 @@ export default function GettingReady(props: GettingReadyProps) {
       <ol class="mt-6 flex flex-col gap-4" aria-label="Startup steps">
         <For each={steps()}>
           {(key) => (
-            <li class="flex gap-3">
+            <li
+              class="flex gap-3"
+              aria-current={stepState(key) === "current" ? "step" : undefined}
+            >
               <span class="flex size-5 shrink-0 items-center justify-center">
                 <Show
                   when={stepState(key) === "current"}
@@ -266,9 +276,7 @@ export default function GettingReady(props: GettingReadyProps) {
                       <span class="text-xs text-text-muted">{line()}</span>
                     )}
                   </Show>
-                  <Show
-                    when={key !== "service" && stepSeconds() >= SLOW_AFTER_SEC}
-                  >
+                  <Show when={stepSeconds() >= SLOW_AFTER_SEC[key]}>
                     <span class="text-xs text-text-secondary">
                       Taking longer than usual. The network may be busy; the app
                       carries on by itself.
@@ -290,7 +298,7 @@ export default function GettingReady(props: GettingReadyProps) {
       </Show>
 
       <p
-        class={`mt-auto text-center text-sm text-text-secondary transition-opacity duration-300 ${
+        class={`mt-auto text-center text-sm text-text-secondary transition-opacity duration-300 motion-reduce:transition-none ${
           triviaVisible() ? "opacity-100" : "opacity-0"
         }`}
       >

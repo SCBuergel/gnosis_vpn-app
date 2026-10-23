@@ -2,9 +2,9 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  createUniqueId,
   For,
   on,
-  onCleanup,
   onMount,
   Show,
   untrack,
@@ -23,27 +23,26 @@ import {
   sortAlphaDestinations,
   sortForPicker,
 } from "@src/utils/destinations.ts";
+import {
+  type ColumnFrame,
+  createPopoverDismiss,
+  POPOVER_ARROW_PX,
+  POPOVER_GAP_PX,
+  POPOVER_MARGIN_PX,
+  POPOVER_SURFACE_CLASS,
+  PopoverArrow,
+} from "../common/popover.tsx";
 import Tooltip from "../common/Tooltip.tsx";
 import SearchIcon from "../icons/SearchIcon.tsx";
+import { refreezeNeeded } from "./frozenList.ts";
 import LocationRow from "./LocationRow.tsx";
 import UnreachableDialog from "./UnreachableDialog.tsx";
 import { createClock } from "@src/utils/clock.ts";
 
 // Fallback width when no frame is given; the frame normally sets it.
 const DEFAULT_WIDTH_PX = 270;
-// Distance from the window edge the popover keeps, and from the anchor to the arrow tip.
-const MARGIN_PX = 8;
-const GAP_PX = 10;
-const ARROW_PX = 12;
 // Gap kept above the primary button.
 const BOTTOM_GAP_PX = 10;
-
-/** The column the popover spans (the status card's edges) and the y it must not pass. */
-export interface PickerFrame {
-  left: number;
-  width: number;
-  maxBottom: number;
-}
 
 /** The next index in `direction` that passes `ok`, wrapping; `from` when nothing does. */
 function step<T>(
@@ -66,13 +65,15 @@ export default function LocationPicker(props: {
   // The button that opened the picker: a press on it is the opener's toggle, not an outside click.
   opener?: HTMLElement;
   // The edges to span and the floor to stop at; without it, centred under the anchor.
-  frame: PickerFrame | null;
+  frame: ColumnFrame | null;
   // The destination chosen, or null when the picker was dismissed.
   onClose: (picked: string | null) => void;
 }) {
   const [appState, appActions] = useAppStore();
   const [settings, settingsActions] = useSettingsStore();
 
+  const listId = createUniqueId();
+  const optionId = (id: string) => `${listId}-${id}`;
   const [query, setQuery] = createSignal("");
   const [highlight, setHighlight] = createSignal(0);
   // True while the highlight was last moved by the arrow keys: that row's tooltip then opens on its own.
@@ -117,16 +118,17 @@ export default function LocationPicker(props: {
       )
       .map((d) => d.id);
   });
-  let knownMeasured = new Set<string>(untrack(measuredIds));
+  let knownMeasured: ReadonlySet<string> = new Set(untrack(measuredIds));
   createEffect(() => {
     const next = sortedDestinations();
-    const measured = measuredIds();
-    const prevIds = new Set(untrack(frozenList).map((d) => d.id));
-    const membershipChanged = prevIds.size !== next.length ||
-      next.some((d) => !prevIds.has(d.id));
-    const newlyMeasured = measured.some((id) => !knownMeasured.has(id));
-    if (newlyMeasured) knownMeasured = new Set(measured);
-    if (!membershipChanged && !newlyMeasured) return;
+    const verdict = refreezeNeeded(
+      untrack(frozenList).map((d) => d.id),
+      next.map((d) => d.id),
+      measuredIds(),
+      knownMeasured,
+    );
+    knownMeasured = verdict.known;
+    if (!verdict.refreeze) return;
     // The highlight stays on the same location when rows move.
     const highlightedId = untrack(() => filtered()[untrack(highlight)]?.id);
     setFrozenList([...next]);
@@ -210,32 +212,13 @@ export default function LocationPicker(props: {
     }
   };
 
-  // Esc closes (the dialog first, if it is up); a press outside closes too.
-  const onDocumentKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== "Escape") return;
-    e.stopPropagation();
-    if (showUnreachable()) setShowUnreachable(false);
-    else props.onClose(null);
-  };
-  const onDocumentPointerDown = (e: PointerEvent) => {
-    const target = e.target instanceof Node ? e.target : null;
-    if (showUnreachable()) return;
-    if (target && popoverRef?.contains(target)) return;
-    if (target && props.opener?.contains(target)) return;
-    props.onClose(null);
-  };
-  onMount(() => {
-    searchInputRef?.focus();
-    // capture: the opening button's own click must not reach us as "outside"
-    document.addEventListener("keydown", onDocumentKeyDown, true);
-    setTimeout(
-      () => document.addEventListener("pointerdown", onDocumentPointerDown),
-      0,
-    );
-  });
-  onCleanup(() => {
-    document.removeEventListener("keydown", onDocumentKeyDown, true);
-    document.removeEventListener("pointerdown", onDocumentPointerDown);
+  onMount(() => searchInputRef?.focus());
+  createPopoverDismiss({
+    popover: () => popoverRef,
+    opener: () => props.opener,
+    nested: showUnreachable,
+    onEscapeNested: () => setShowUnreachable(false),
+    onClose: () => props.onClose(null),
   });
 
   // Spans the frame's column; without one, centred under the anchor and kept inside the window.
@@ -244,19 +227,19 @@ export default function LocationPicker(props: {
   const left = () =>
     props.frame?.left ??
       Math.max(
-        MARGIN_PX,
+        POPOVER_MARGIN_PX,
         Math.min(
           anchorX() - width() / 2,
-          globalThis.innerWidth - width() - MARGIN_PX,
+          globalThis.innerWidth - width() - POPOVER_MARGIN_PX,
         ),
       );
-  const top = () => props.anchor.bottom + GAP_PX;
+  const top = () => props.anchor.bottom + POPOVER_GAP_PX;
   // Down to just above the primary button; the list scrolls inside beyond that.
   const maxHeight = () => {
     const floor = props.frame?.maxBottom ?? globalThis.innerHeight;
     return Math.max(120, floor - BOTTOM_GAP_PX - top());
   };
-  const arrowLeft = () => anchorX() - left() - ARROW_PX / 2;
+  const arrowLeft = () => anchorX() - left() - POPOVER_ARROW_PX / 2;
 
   const sortOptions = [
     { order: "best" as const, label: "Best" },
@@ -269,7 +252,7 @@ export default function LocationPicker(props: {
         ref={popoverRef}
         role="dialog"
         aria-label="Choose location"
-        class="fixed z-100 flex flex-col rounded-xl border border-border bg-bg-surface shadow-xl transition-[opacity,transform] duration-150 ease-out starting:-translate-y-1 starting:opacity-0"
+        class={POPOVER_SURFACE_CLASS}
         style={{
           left: `${left()}px`,
           top: `${top()}px`,
@@ -277,18 +260,21 @@ export default function LocationPicker(props: {
           "max-height": `${maxHeight()}px`,
         }}
       >
-        <span
-          class="absolute -top-[7px] size-3 rotate-45 border-l border-t border-border bg-bg-surface"
-          style={{ left: `${arrowLeft()}px` }}
-          aria-hidden="true"
-        />
+        <PopoverArrow left={arrowLeft()} />
         <div class="flex shrink-0 items-center gap-1.5 p-2">
           <div class="relative min-w-0 flex-1">
             <SearchIcon class="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-text-muted" />
             <input
               ref={searchInputRef}
               type="text"
+              role="combobox"
               aria-label="Search locations"
+              aria-expanded="true"
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={filtered()[highlight()]
+                ? optionId(filtered()[highlight()].id)
+                : undefined}
               placeholder="Search locations"
               autocomplete="off"
               spellcheck={false}
@@ -338,6 +324,7 @@ export default function LocationPicker(props: {
 
         <div
           ref={listRef}
+          id={listId}
           role="listbox"
           aria-label="Locations"
           class="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5"
@@ -345,6 +332,7 @@ export default function LocationPicker(props: {
           <For each={filtered()}>
             {(dest, i) => (
               <LocationRow
+                id={optionId(dest.id)}
                 destinationState={stateOf(dest.id, dest)}
                 current={dest.id === currentId()}
                 highlighted={i() === highlight()}

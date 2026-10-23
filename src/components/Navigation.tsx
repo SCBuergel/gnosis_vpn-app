@@ -15,15 +15,15 @@ import { deriveOverallStatus } from "../utils/funding.ts";
 import { createEffect, createSignal, Show } from "solid-js";
 import { useAppStore } from "../stores/appStore.ts";
 import Tooltip from "./common/Tooltip.tsx";
-import type { PickerFrame } from "./exitNode/LocationPicker.tsx";
+import type { ColumnFrame } from "./common/popover.tsx";
 
 function Navigation(props: {
   // The column the wallet popover keeps to; measured when it opens.
-  pickerFrame?: () => PickerFrame | null;
+  columnFrame?: () => ColumnFrame | null;
 }) {
   const [appState] = useAppStore();
   const [walletAnchor, setWalletAnchor] = createSignal<DOMRect | null>(null);
-  const [walletFrame, setWalletFrame] = createSignal<PickerFrame | null>(null);
+  const [walletFrame, setWalletFrame] = createSignal<ColumnFrame | null>(null);
   let walletButtonRef: HTMLButtonElement | undefined;
 
   // Icon reflects the worst of traffic and gas status, matching the two
@@ -41,7 +41,7 @@ function Navigation(props: {
 
   const openWallet = () => {
     if (!walletButtonRef) return;
-    setWalletFrame(props.pickerFrame?.() ?? null);
+    setWalletFrame(props.columnFrame?.() ?? null);
     setWalletAnchor(walletButtonRef.getBoundingClientRect());
   };
   const closeWallet = () => {
@@ -72,6 +72,8 @@ function Navigation(props: {
               ref={(el) => (walletButtonRef = el)}
               icon={getFundsIcon()}
               alt="Balance"
+              haspopup="dialog"
+              expanded={walletAnchor() !== null}
               onClick={toggleWallet}
             />
           </Tooltip>

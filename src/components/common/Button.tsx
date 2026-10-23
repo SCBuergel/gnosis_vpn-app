@@ -7,6 +7,8 @@ import {
 } from "solid-js";
 
 export interface ButtonProps {
+  // The rendered element, for callers that need to focus it.
+  ref?: (el: HTMLButtonElement) => void;
   variant?: "primary" | "secondary" | "outline" | "stop" | "neutral";
   size?: "sm" | "md" | "lg" | "main";
   fullWidth?: boolean;
@@ -78,6 +80,7 @@ export default function Button(allProps: ButtonProps): JSX.Element {
     "disabled",
     "onClick",
     "loading",
+    "ref",
   ]);
 
   const computedClass = () =>
@@ -94,6 +97,7 @@ export default function Button(allProps: ButtonProps): JSX.Element {
 
   return (
     <button
+      ref={local.ref}
       type="button"
       class={computedClass()}
       disabled={local.disabled || local.loading}

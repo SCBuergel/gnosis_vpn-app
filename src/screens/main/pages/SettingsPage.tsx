@@ -92,9 +92,10 @@ export default function SettingsPage() {
           control={
             <Show
               when={appState.availableDestinations.length > 0}
-              fallback={<span class="text-xs">No servers available</span>}
+              fallback={<span class="text-xs">No locations yet</span>}
             >
               <Dropdown
+                label="Preferred location"
                 options={[
                   { id: null as string | null, label: "No preference" },
                   ...appState.availableDestinations.map((e) => ({
@@ -143,9 +144,10 @@ export default function SettingsPage() {
 
       <Section title="Appearance">
         <Row
-          label="Exit node flags"
+          label="Location flags"
           control={
             <Dropdown
+              label="Location flags"
               options={FLAG_DISPLAY_OPTIONS}
               value={FLAG_DISPLAY_OPTIONS.find((o) =>
                 o.id === settings.flagDisplay

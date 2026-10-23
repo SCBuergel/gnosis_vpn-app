@@ -116,7 +116,7 @@ export default function RouteTooltip(props: {
         />
         <Row
           label="Route"
-          value={formatRouting(props.routing).replace("-", " ")}
+          value={formatRouting(props.routing)}
         />
         <Row label="Checked" value={checked()} />
       </div>

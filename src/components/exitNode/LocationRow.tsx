@@ -21,6 +21,8 @@ import SignalBars from "./SignalBars.tsx";
 
 /** One line of the location picker: flag, name, country, and the route's bars in one column. */
 export default function LocationRow(props: {
+  /** DOM id, so the search field can name the highlighted row through aria-activedescendant. */
+  id: string;
   destinationState: DestinationState;
   current: boolean;
   highlighted: boolean;
@@ -66,6 +68,7 @@ export default function LocationRow(props: {
       destinationTitle(destination()),
       destinationCountry(destination()),
       verdict().headline,
+      props.current ? "current" : null,
     ]
       .filter(Boolean)
       .join(", ");
@@ -95,8 +98,9 @@ export default function LocationRow(props: {
       bubbleClass="max-w-64"
     >
       <div
+        id={props.id}
         role="option"
-        aria-selected={props.highlighted}
+        aria-selected={props.current}
         aria-disabled={!pickable()}
         aria-label={accessibleName()}
         aria-describedby={descriptionId}

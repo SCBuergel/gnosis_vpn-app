@@ -34,11 +34,11 @@ export function StatusIndicator(
       return { text: "Connecting", color: "bg-text-primary" };
     }
     if (appState.vpnStatus === "WorkerRestarting") {
-      return { text: "Restarting...", color: "bg-vpn-yellow" };
+      return { text: "Restarting…", color: "bg-vpn-yellow" };
     }
     if (appState.vpnStatus === "ServiceUnavailable") {
       return {
-        text: appState.isLoading ? "Loading..." : "Service unavailable",
+        text: appState.isLoading ? "Loading…" : "Service unavailable",
         color: "bg-vpn-red",
       };
     } else {

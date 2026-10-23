@@ -38,7 +38,7 @@ export default function AboutPage() {
             label="Version"
             control={
               <span class="select-text text-text-primary">
-                {appState.packageVersion ?? "Something went wrong"}
+                {appState.packageVersion ?? "—"}
               </span>
             }
           />

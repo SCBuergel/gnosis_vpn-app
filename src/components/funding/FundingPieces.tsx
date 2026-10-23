@@ -107,7 +107,12 @@ export function TokenRow(props: {
               fallback={<span>{hintText()}</span>}
             >
               {(exact) => (
-                <Tooltip content={<span>{exact()}</span>} position="auto">
+                <Tooltip
+                  content={<span>{exact()}</span>}
+                  position="auto"
+                  focusable
+                  description={exact()}
+                >
                   <span class="cursor-help">{hintText()}</span>
                 </Tooltip>
               )}

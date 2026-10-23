@@ -207,7 +207,7 @@ export function Dropdown<T>(props: DropdownProps<T>) {
         } flex flex-row gap-2 items-center ${props.class ?? ""}`}
       >
         <div class="flex flex-col grow">
-          <Show when={props.label}>
+          <Show when={props.label && props.size !== "compact"}>
             <div class="mb-1 text-xs text-text-secondary">{props.label}</div>
           </Show>
 
@@ -233,6 +233,9 @@ export function Dropdown<T>(props: DropdownProps<T>) {
           disabled={props.disabled}
           aria-haspopup="listbox"
           aria-expanded={open()}
+          aria-label={[props.label, props.value ? toString(props.value) : null]
+            .filter(Boolean)
+            .join(": ")}
           class={`inline-flex items-center justify-center disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus
                transition-transform duration-150 ease-out select-none ${
             props.size === "sm"

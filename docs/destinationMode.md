@@ -346,6 +346,8 @@ destination ends a selection.
   eligible candidate.
 - `effectiveCandidate === active` → disarm: clear the pending and let the sweep
   drop its card unless it is history.
+- `status.measuring` → disarm: the first pass is still answering, one switch
+  after it beats one per answer.
 - `pending === null` → arm: mint the entry if new, append to `sequence`, set
   `countdownEndsAt = now + SWITCH_COUNTDOWN_MS` and
   `settleAt = countdownEndsAt +
@@ -524,14 +526,17 @@ the unchanged `checked_at` is what says how stale the value is. Only an exit
 nothing has measured yet has no exit data.
 
 **The list opening starts quick probes, one at a time.** On `listOpened`, cap
-the status poll at `STATUS_POLL_FAST_MS` and start the loop; on `listClosed`,
-lift the cap and stop issuing. A quick probe in flight when the list closes
-finishes on its own and its result is kept.
+the status poll at `STATUS_POLL_FAST_MS` and start the loop; whenever `listOpen`
+falls, by `listClosed` or by the model closing the list itself, lift the cap and
+stop issuing. A quick probe in flight when the list closes finishes on its own
+and its result is kept.
 
 **The first pass runs the same loop with `unmeasuredOnly`.** With the list
 closed and no session up, the loop issues only for exits whose `quick_probe` is
 `null`, at the normal poll rate, and stops when none is left. An exit the daemon
-refuses is remembered for the session and not asked again. While the pass runs,
+refuses (`UnableToProbe`, `DestinationNotFound`) is remembered for the session
+and not asked again; one that answers "not now" or whose result never lands is
+asked `FIRST_PASS_ATTEMPTS` times and then left alone. While the pass runs,
 `ModeAppState.measuring` holds auto's countdown (no switch per answer; one after
 the pass) and the hero says "Checking locations…" instead of "Best location".
 

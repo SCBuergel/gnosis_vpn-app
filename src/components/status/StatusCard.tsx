@@ -68,9 +68,10 @@ const QUALITY: Record<
   poor: { text: "Poor", bars: 1, tone: "red", class: "text-text-red" },
 };
 
+const LATENCY_TEXT = "Round trip to the exit; under 100 ms is fast.";
 const LATENCY_TOOLTIP = (
   <div class="space-y-1">
-    <p class="text-white font-bold">Expected ~200ms</p>
+    <p class="text-white font-bold">{LATENCY_TEXT}</p>
     <div class="flex items-center gap-1.5">
       <span class="text-vpn-light-green">&#9660;</span>
       <span>Lower is better</span>
@@ -90,10 +91,23 @@ const RELAYS_TOOLTIP =
 const ROUTE_TOOLTIP =
   "How many HOPR relays each packet passes on its way to the exit.";
 
-/** A label whose explanation shows on hover, with no visible icon. */
-function Label(props: { text: string; tooltip: JSX.Element }) {
+/** A label whose explanation shows on hover or focus, with no visible icon. */
+function Label(props: {
+  text: string;
+  tooltip: string | JSX.Element;
+  // What a screen reader gets; a string tooltip is its own description.
+  description?: string;
+}) {
   return (
-    <Tooltip content={props.tooltip} position="top">
+    <Tooltip
+      content={typeof props.tooltip === "string"
+        ? <span>{props.tooltip}</span>
+        : props.tooltip}
+      position="top"
+      focusable
+      description={props.description ??
+        (typeof props.tooltip === "string" ? props.tooltip : undefined)}
+    >
       <span class="cursor-help">{props.text}</span>
     </Tooltip>
   );
@@ -101,14 +115,19 @@ function Label(props: { text: string; tooltip: JSX.Element }) {
 
 function Metric(props: {
   label: string;
-  tooltip: JSX.Element;
+  tooltip: string | JSX.Element;
+  description?: string;
   value: string | null;
   valueClass: string;
 }) {
   return (
     <div class="flex min-w-0 flex-1 flex-col">
       <span class="text-[11px] text-text-muted">
-        <Label text={props.label} tooltip={props.tooltip} />
+        <Label
+          text={props.label}
+          tooltip={props.tooltip}
+          description={props.description}
+        />
       </span>
       <span
         class={`mt-0.5 text-lg font-bold leading-tight ${
@@ -123,7 +142,7 @@ function Metric(props: {
 
 function DiagnosticRow(props: {
   label: string;
-  tooltip: JSX.Element;
+  tooltip: string;
   value: string | null;
 }) {
   return (
@@ -322,7 +341,7 @@ export default function StatusCard(
             tabIndex={0}
             aria-expanded={expanded()}
             aria-label={`${row().prefix} ${row().text}. Toggle details`}
-            class="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus"
+            class="flex w-full items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus"
             onClick={toggle}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.repeat) toggle();
@@ -339,14 +358,19 @@ export default function StatusCard(
                 pulsing={row().pulsing}
                 label={`${row().prefix} ${row().text}`}
               />
-              <span class="truncate text-text-secondary">
-                {row().prefix}{" "}
+              {/* When tags crowd the row the prefix gives way, never the verdict. */}
+              <span class="flex min-w-0 items-baseline gap-1 text-text-secondary">
+                <span class="truncate">{row().prefix}</span>
                 {/* The verdict is the text itself; a weak route explains itself on hover instead of repeating as a tag. */}
                 <Tooltip
                   content={<span>{WEAK_ROUTE}</span>}
                   disabled={isConnected() || !isWeak()}
+                  focusable={!isConnected() && isWeak()}
+                  description={WEAK_ROUTE}
                 >
-                  <span class={`font-bold ${row().class}`}>{row().text}</span>
+                  <span class={`whitespace-nowrap font-bold ${row().class}`}>
+                    {row().text}
+                  </span>
                 </Tooltip>
               </span>
               <Show when={stall()}>{(s) => <StalledTag stall={s()} />}</Show>
@@ -379,51 +403,51 @@ export default function StatusCard(
                 <Metric
                   label="Latency"
                   tooltip={LATENCY_TOOLTIP}
+                  description={LATENCY_TEXT}
                   value={latency()}
                   valueClass={latencyClass()}
                 />
                 <div class="ml-4 flex min-w-0 flex-1 border-l border-border pl-4">
                   <Metric
                     label="Server load"
-                    tooltip={<span>{loadTooltip()}</span>}
+                    tooltip={loadTooltip()}
                     value={loadValue()}
                     valueClass={loadClass()}
                   />
                 </div>
               </div>
-              <div class="px-3.5 pb-3 pt-2.5">
+              <div class="px-3 pb-3 pt-2.5">
                 <h2 class="mb-0.5 text-[11px] font-bold text-text-muted">
                   Diagnostics
                 </h2>
                 <Show when={isConnected()}>
                   <DiagnosticRow
                     label="Connected for"
-                    tooltip={<span>{CONNECTED_FOR_TOOLTIP}</span>}
+                    tooltip={CONNECTED_FOR_TOOLTIP}
                     value={connectedFor()}
                   />
                 </Show>
                 <DiagnosticRow
                   label="Last checked"
-                  tooltip={<span>{CHECKED_TOOLTIP}</span>}
+                  tooltip={CHECKED_TOOLTIP}
                   value={lastChecked()}
                 />
                 <DiagnosticRow
                   label="Path"
-                  tooltip={<span>{PATH_TOOLTIP}</span>}
+                  tooltip={PATH_TOOLTIP}
                   value={pathValue()}
                 />
                 <DiagnosticRow
                   label={isConnected() ? "Relays" : "Relays available"}
-                  tooltip={<span>{RELAYS_TOOLTIP}</span>}
+                  tooltip={RELAYS_TOOLTIP}
                   value={relays()}
                 />
                 <DiagnosticRow
                   label="Route"
-                  tooltip={<span>{ROUTE_TOOLTIP}</span>}
+                  tooltip={ROUTE_TOOLTIP}
                   value={formatRouting(
                     props.destinationState.destination.routing,
-                  )
-                    .replace("-", " ")}
+                  )}
                 />
               </div>
             </div>

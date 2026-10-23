@@ -134,6 +134,7 @@ export default function ConnectingExplainer(
   const [active, setActive] = createSignal<number[]>(pickRelays(hops(), []));
   createEffect(() => {
     const count = hops();
+    if (reducedMotion) return;
     const timer = setInterval(
       () => setActive((cur) => pickRelays(count, cur)),
       RELAY_ROTATE_MS,
@@ -307,14 +308,6 @@ export default function ConnectingExplainer(
             rx="4"
             class="fill-bg-surface stroke-text-muted/60 stroke-[1.5]"
           />
-          <text
-            x={EXIT[0]}
-            y={EXIT[1] + 26}
-            text-anchor="middle"
-            class="fill-text-muted text-[9px]"
-          >
-            {title()}
-          </text>
 
           <Show when={!reducedMotion}>
             <circle
@@ -334,10 +327,22 @@ export default function ConnectingExplainer(
         >
           <Flag code={destinationFlag(destination())} size="sm" />
         </span>
+        {/* HTML, not SVG text: a long city name truncates instead of running off the edge. */}
+        <span
+          class="pointer-events-none absolute right-0 max-w-[45%] truncate text-right text-[9px] text-text-muted"
+          style={{ top: `${((EXIT[1] + 18) / VIEW_H) * 100}%` }}
+        >
+          {title()}
+        </span>
       </div>
 
       {/* The exact daemon phase is the tooltip of the step line. */}
-      <Tooltip content={<span>{phaseText()}</span>} triggerClass="w-full">
+      <Tooltip
+        content={<span>{phaseText()}</span>}
+        triggerClass="w-full"
+        focusable
+        description={phaseText()}
+      >
         <div class="flex min-h-[18px] w-full items-center gap-2">
           <span class="flex gap-1" aria-hidden="true">
             <For each={Array.from({ length: CONNECT_STEP_COUNT }, (_, i) => i)}>
@@ -361,6 +366,7 @@ export default function ConnectingExplainer(
       <div
         class="mt-2 h-[3px] overflow-hidden rounded-full bg-border"
         role="progressbar"
+        aria-label="Connection progress"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress())}

@@ -353,7 +353,7 @@ export default function SoftwareUpdatePage() {
             </Show>
             <button
               type="button"
-              class="text-sm text-text-secondary underline"
+              class="rounded-sm text-sm text-text-secondary underline focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
               onClick={() => setShowHowTo(true)}
             >
               How to update

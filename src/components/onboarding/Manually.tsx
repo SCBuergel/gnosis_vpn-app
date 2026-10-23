@@ -36,7 +36,7 @@ const ONBOARDING_COPY = {
   waitingFor: (token: string) => `One down. Waiting for the ${token} now.`,
   done: {
     title: "Both arrived",
-    detail: "Setting up your node. This takes a minute or two.",
+    detail: "Creating your Safe next. This takes a minute or two.",
   },
 } as const;
 
