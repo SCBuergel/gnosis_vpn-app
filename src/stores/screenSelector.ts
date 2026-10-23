@@ -61,18 +61,24 @@ function retryingSafeDeployment(status: StatusResponse): string | null {
 export interface RouteSearchProgress {
   walked: number;
   total: number;
+  /** Exits still worth a path: everything the daemon has not written off. */
+  pending: number;
 }
 
 export function routeSearchProgress(
   status: StatusResponse,
 ): RouteSearchProgress {
   const total = status.destinations.length;
+  const unrecoverable =
+    status.destinations.filter((ds) =>
+      ds.route_health?.state.state === "Unrecoverable"
+    ).length;
   const walked = status.destinations.filter((ds) =>
     ds.route_health !== null &&
     (ds.route_health.walk !== null ||
       ds.route_health.state.state === "Unrecoverable")
   ).length;
-  return { walked, total };
+  return { walked, total, pending: total - unrecoverable };
 }
 
 export function detectSyncPhase(

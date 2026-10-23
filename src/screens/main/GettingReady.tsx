@@ -142,7 +142,7 @@ export default function GettingReady(props: GettingReadyProps) {
     if (!routes || routes.total === 0) return null;
     const progress = routes.walked < routes.total
       ? `${routes.walked} of ${routes.total} locations checked`
-      : `No path to ${routes.total} locations yet, checking again`;
+      : `No path to ${routes.pending} locations yet, checking again`;
     return stepSeconds() >= SHOW_TIMER_AFTER_SEC
       ? `${progress} · ${formatDuration(stepSeconds())}`
       : progress;

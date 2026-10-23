@@ -29,6 +29,8 @@ export default function Tooltip(props: {
   // Extra classes for the trigger wrapper, replacing the default `w-fit`
   // (e.g. `w-full` when the trigger should span its row).
   triggerClass?: string;
+  // ARIA role of the trigger wrapper, e.g. "presentation" when it wraps a listbox's option.
+  triggerRole?: "presentation";
   // Extra classes for the bubble, e.g. a wider max width.
   bubbleClass?: string;
   // id for the bubble, so a trigger can point at it with aria-describedby.
@@ -137,6 +139,7 @@ export default function Tooltip(props: {
   return (
     <div
       ref={triggerRef}
+      role={props.triggerRole}
       class={`relative inline-flex ${props.triggerClass ?? "w-fit"}`}
       tabindex={props.tabIndex}
       onMouseEnter={show}

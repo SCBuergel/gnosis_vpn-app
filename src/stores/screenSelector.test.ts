@@ -274,13 +274,14 @@ describe("routeSearchProgress", () => {
           { destination: makeDestination(), route_health: null },
         ]),
       ),
-    ).toEqual({ walked: 2, total: 4 });
+    ).toEqual({ walked: 2, total: 4, pending: 3 });
   });
 
   it("is empty before the daemon lists anything", () => {
     expect(routeSearchProgress(status(WARMUP))).toEqual({
       walked: 0,
       total: 0,
+      pending: 0,
     });
   });
 });

@@ -87,6 +87,7 @@ export default function LocationRow(props: {
         />
       }
       triggerClass="w-full"
+      triggerRole="presentation"
       anchor={() => barsRef}
       position="auto"
       align="end"
