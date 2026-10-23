@@ -106,6 +106,8 @@ function BalanceRow(props: {
 /** The wallet icon's popover: both balances, the service's state in one line, and the way to add funds. */
 export default function WalletPopover(props: {
   anchor: DOMRect;
+  // The button that opened the popover: a press on it is the opener's toggle, not an outside click.
+  opener?: HTMLElement;
   frame: ColumnFrame | null;
   onClose: () => void;
   onAddFunds: () => void;
@@ -172,7 +174,11 @@ export default function WalletPopover(props: {
   onMount(() => addFundsRef?.focus());
 
   // Esc, a press outside, or the window losing focus closes it.
-  createPopoverDismiss({ popover: () => popoverRef, onClose: props.onClose });
+  createPopoverDismiss({
+    popover: () => popoverRef,
+    opener: () => props.opener,
+    onClose: props.onClose,
+  });
   createEffect(() => {
     if (!isWindowFocused()) props.onClose();
   });

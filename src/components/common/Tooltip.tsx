@@ -1,13 +1,13 @@
 import {
   createEffect,
   createSignal,
+  createUniqueId,
   type JSX,
   onCleanup,
   Show,
   untrack,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { createUniqueId } from "solid-js";
 import { gateOnWindowFocus } from "@src/utils/windowFocus.ts";
 
 const MARGIN = 8; // min gap from viewport edge

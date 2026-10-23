@@ -391,12 +391,13 @@ export default function StatusCard(
               />
             </span>
           </div>
+          {/* inert: the collapsed panel's focusable labels must not be Tab stops. */}
           <div
+            inert={!expanded()}
             class="overflow-hidden transition-[max-height] duration-300 ease-out"
             style={{
               "max-height": expanded() ? `${panelHeightPx()}px` : "0px",
             }}
-            aria-hidden={!expanded()}
           >
             <div ref={panelRef}>
               <div class="mx-3.5 flex border-b border-border pb-3">

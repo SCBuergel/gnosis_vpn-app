@@ -91,6 +91,7 @@ function Navigation(props: {
         {(anchor) => (
           <WalletPopover
             anchor={anchor()}
+            opener={walletButtonRef}
             frame={walletFrame()}
             onClose={closeWallet}
             onAddFunds={() => {
