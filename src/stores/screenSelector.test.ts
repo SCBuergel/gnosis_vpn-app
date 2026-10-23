@@ -263,25 +263,24 @@ describe("detectSyncPhase", () => {
 });
 
 describe("routeSearchProgress", () => {
-  it("counts the exits the daemon has walked or written off", () => {
-    const unwalked = { ...eligibleRouteHealth(), walk: null };
+  it("counts the exits the daemon can reach, out of all it lists", () => {
     expect(
       routeSearchProgress(
         status(RUNNING, [
           destination(noPathRouteHealth()),
           destination(unrecoverableRouteHealth()),
-          destination(unwalked),
+          destination(eligibleRouteHealth()),
+          destination(weakRouteHealth()),
           { destination: makeDestination(), route_health: null },
         ]),
       ),
-    ).toEqual({ walked: 2, total: 4, pending: 3 });
+    ).toEqual({ ready: 2, total: 5 });
   });
 
   it("is empty before the daemon lists anything", () => {
     expect(routeSearchProgress(status(WARMUP))).toEqual({
-      walked: 0,
+      ready: 0,
       total: 0,
-      pending: 0,
     });
   });
 });

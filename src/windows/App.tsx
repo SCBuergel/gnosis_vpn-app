@@ -1,6 +1,7 @@
 import { MainScreen } from "../screens/main/MainScreen.tsx";
 import { Dynamic } from "solid-js/web";
 import { AppScreen, AppState, useAppStore } from "@src/stores/appStore.ts";
+import { isWarmupRunMode } from "@src/services/vpnService.ts";
 import {
   createEffect,
   createSignal,
@@ -84,7 +85,9 @@ function mapStoreToScreenProps(screen: ValidScreen, state: AppState) {
         error: state.error,
         phase: state.syncPhase,
         firstRun: state.firstRun,
-        statusLine: state.warmupStatus,
+        warmup: isWarmupRunMode(state.runMode)
+          ? state.runMode.Warmup.status
+          : null,
         routes: state.syncRoutes,
         recoveryReason: state.syncRecoveryReason,
         info: state.serviceInfo,

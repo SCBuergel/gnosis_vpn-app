@@ -9,7 +9,7 @@ import {
   Show,
 } from "solid-js";
 import { getVersion } from "@tauri-apps/api/app";
-import type { ServiceInfo } from "@src/services/vpnService.ts";
+import type { ServiceInfo, WarmupStatus } from "@src/services/vpnService.ts";
 import type {
   RouteSearchProgress,
   SyncPhaseIndex,
@@ -17,7 +17,10 @@ import type {
 import GnosisVpnLogo from "@src/components/common/GnosisVpnLogo.tsx";
 import Spinner from "@src/components/common/Spinner.tsx";
 import { describeStartupError } from "@src/utils/startupError.ts";
-import { formatDuration } from "@src/utils/exitHealth.ts";
+import {
+  friendlyWarmupStatus,
+  readyLocationsLine,
+} from "@src/utils/startupCopy.ts";
 import { createClock } from "@src/utils/clock.ts";
 import { createSecretReveal } from "@src/utils/secretReveal.ts";
 
@@ -30,8 +33,8 @@ export interface GettingReadyProps {
   phase: SyncPhaseIndex | null;
   /** The Safe is being set up in this run: the list shows that step and the longer estimate. */
   firstRun: boolean;
-  /** The daemon's own word for what it is doing right now. */
-  statusLine: string;
+  /** The daemon's warmup state while the node starts; null otherwise. */
+  warmup: WarmupStatus | null;
   routes: RouteSearchProgress | null;
   recoveryReason?: string | null;
   info: ServiceInfo | null;
@@ -57,7 +60,7 @@ const STEPS: Record<StepKey, { title: string; detail: string }> = {
   },
   routes: {
     title: "Finding routes",
-    detail: "Asking the network for a path to each location.",
+    detail: "Checking which locations you can connect to.",
   },
 };
 
@@ -75,8 +78,6 @@ const SLOW_AFTER_SEC: Record<StepKey, number> = {
   node: 60,
   routes: 60,
 };
-/** The route step shows how long it has been going once it is no longer instant. */
-const SHOW_TIMER_AFTER_SEC = 5;
 
 const trivia = [
   "Gnosis VPN routes your traffic through the HOPR mixnet.",
@@ -140,17 +141,7 @@ export default function GettingReady(props: GettingReadyProps) {
       : "Takes a few seconds.";
   };
 
-  // The daemon walks every exit, then walks again until one has a path.
-  const routesLine = () => {
-    const routes = props.routes;
-    if (!routes || routes.total === 0) return null;
-    const progress = routes.walked < routes.total
-      ? `${routes.walked} of ${routes.total} locations checked`
-      : `No path to ${routes.pending} locations yet, checking again`;
-    return stepSeconds() >= SHOW_TIMER_AFTER_SEC
-      ? `${progress} · ${formatDuration(stepSeconds())}`
-      : progress;
-  };
+  const routesLine = () => props.routes && readyLocationsLine(props.routes);
 
   const handleVersionClick = createSecretReveal(() => setShowDetails(true));
 
@@ -241,8 +232,8 @@ export default function GettingReady(props: GettingReadyProps) {
                     when={key === "service" && startupError()}
                     fallback={
                       <span class="text-xs text-text-secondary">
-                        {key === "node" && props.statusLine
-                          ? props.statusLine
+                        {key === "node" && props.warmup
+                          ? friendlyWarmupStatus(props.warmup)
                           : STEPS[key].detail}
                       </span>
                     }
@@ -278,8 +269,7 @@ export default function GettingReady(props: GettingReadyProps) {
                   </Show>
                   <Show when={stepSeconds() >= SLOW_AFTER_SEC[key]}>
                     <span class="text-xs text-text-secondary">
-                      Taking longer than usual. The network may be busy; the app
-                      carries on by itself.
+                      Taking longer than usual. The app keeps trying by itself.
                     </span>
                   </Show>
                 </Show>

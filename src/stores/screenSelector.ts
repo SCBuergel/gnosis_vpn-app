@@ -57,28 +57,21 @@ function retryingSafeDeployment(status: StatusResponse): string | null {
   return safe.error;
 }
 
-/** How far the daemon's route search has come: exits it has walked, out of all it lists. */
+/** How far the daemon's route search has come: exits it can reach, out of all it lists. */
 export interface RouteSearchProgress {
-  walked: number;
+  ready: number;
   total: number;
-  /** Exits still worth a path: everything the daemon has not written off. */
-  pending: number;
 }
 
 export function routeSearchProgress(
   status: StatusResponse,
 ): RouteSearchProgress {
   const total = status.destinations.length;
-  const unrecoverable =
+  const ready =
     status.destinations.filter((ds) =>
-      ds.route_health?.state.state === "Unrecoverable"
+      ds.route_health?.state.state === "Routable"
     ).length;
-  const walked = status.destinations.filter((ds) =>
-    ds.route_health !== null &&
-    (ds.route_health.walk !== null ||
-      ds.route_health.state.state === "Unrecoverable")
-  ).length;
-  return { walked, total, pending: total - unrecoverable };
+  return { ready, total };
 }
 
 export function detectSyncPhase(
