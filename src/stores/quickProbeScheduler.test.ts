@@ -193,22 +193,28 @@ describe("first pass", () => {
 
   it("is wanted while idle and some routable exit was never measured", () => {
     expect(
-      wantsFirstPass(statusFor({ a: dest("a", 3), b: dest("b", 3, checked) })),
-    )
-      .toBe(true);
-    expect(wantsFirstPass(statusFor({ b: dest("b", 3, checked) }))).toBe(false);
+      wantsFirstPass(
+        statusFor({ a: dest("a", 3), b: dest("b", 3, checked) }),
+        null,
+      ),
+    ).toBe(true);
+    expect(wantsFirstPass(statusFor({ b: dest("b", 3, checked) }), null))
+      .toBe(false);
+  });
+
+  it("does not wait on the active destination, which the probe session measures", () => {
+    expect(wantsFirstPass(statusFor({ a: dest("a", 3) }), "a")).toBe(false);
   });
 
   it("is not wanted during a session, nor for exits the daemon refused", () => {
     const status = statusFor({ a: dest("a", 3) });
     expect(
-      wantsFirstPass({
-        ...status,
-        connecting: { destination_id: "a" } as never,
-      }),
-    )
-      .toBe(false);
-    expect(wantsFirstPass(status, new Set(["a"]))).toBe(false);
+      wantsFirstPass(
+        { ...status, connecting: { destination_id: "a" } as never },
+        null,
+      ),
+    ).toBe(false);
+    expect(wantsFirstPass(status, null, new Set(["a"]))).toBe(false);
   });
 
   it("unmeasuredOnly skips stale exits that the open list would refresh", () => {

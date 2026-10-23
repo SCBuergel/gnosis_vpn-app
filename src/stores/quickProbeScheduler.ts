@@ -26,6 +26,7 @@ export interface QuickProbeScope {
  */
 export function wantsFirstPass(
   status: ModeAppState,
+  activeId: string | null,
   exclude: ReadonlySet<string> = new Set(),
 ): boolean {
   if (
@@ -33,9 +34,11 @@ export function wantsFirstPass(
     status.reconnecting !== null
   ) return false;
 
+  // The active destination is measured by the daemon's probe session, never by a quick probe.
   return Object.values(status.destinations).some((d) =>
     d.route_health?.state.state === "Routable" &&
     d.route_health.quick_probe === null &&
+    d.destination.id !== activeId &&
     !exclude.has(d.destination.id)
   );
 }

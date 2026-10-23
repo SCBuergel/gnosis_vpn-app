@@ -68,7 +68,7 @@ export default function Manually() {
       ? ONBOARDING_COPY.waitingFor("xDAI")
       : xdaiArrived()
       ? ONBOARDING_COPY.waitingFor("wxHOPR")
-      : FUNDING_COPY.idle;
+      : ONBOARDING_COPY.waitingDetail;
 
   return (
     <div class="flex h-full w-full flex-col gap-3 overflow-y-auto px-5 pb-5 pt-6 text-text-primary">
@@ -164,6 +164,7 @@ const ONBOARDING_COPY = {
   hintAfter: " to get started",
   received: "Received",
   waiting: "Waiting",
+  waitingDetail: "Usually shows up within 2 minutes of sending.",
   waitingFor: (token: string) => `One down. Waiting for the ${token} now.`,
   done: {
     title: "Both arrived",

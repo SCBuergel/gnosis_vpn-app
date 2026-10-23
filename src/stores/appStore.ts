@@ -422,7 +422,8 @@ export function createAppStore(): AppStoreTuple {
     setState("vpnStatus", deriveVPNStatus(response));
     setState("availableDestinations", availableDestinations);
 
-    const measuring = !destinationMode?.model.listOpen &&
+    const measuring = destinationMode !== undefined &&
+      !destinationMode.model.listOpen &&
       wantsFirstPass(
         {
           availableDestinations,
@@ -432,6 +433,7 @@ export function createAppStore(): AppStoreTuple {
           reconnecting: response.reconnecting,
           probe: response.probe,
         },
+        effectiveActive(destinationMode.model, Date.now()),
         firstPassRefused,
       );
     setState("measuring", measuring);
@@ -491,10 +493,11 @@ export function createAppStore(): AppStoreTuple {
   const runQuickProbes = (status: ModeAppState) => {
     if (!destinationMode) return;
     const listOpen = destinationMode.model.listOpen;
-    const firstPass = !listOpen && wantsFirstPass(status, firstPassRefused);
-    if (!listOpen && !firstPass) return;
     const now = Date.now();
     const activeId = effectiveActive(destinationMode.model, now);
+    const firstPass = !listOpen &&
+      wantsFirstPass(status, activeId, firstPassRefused);
+    if (!listOpen && !firstPass) return;
     const next = nextQuickProbe(quickProbes, status, activeId, now, {
       unmeasuredOnly: firstPass,
       exclude: firstPass ? firstPassRefused : undefined,
