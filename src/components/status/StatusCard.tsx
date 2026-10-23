@@ -105,8 +105,7 @@ const RELAYS_TOOLTIP =
 const ROUTE_TOOLTIP =
   "How many HOPR relays each packet passes on its way to the exit.";
 
-/** A label whose explanation shows on hover or focus, with no visible icon. */
-/** A big number with its label; the explanation opens from anywhere on it, by hover or focus. */
+/** A big number with its label; the explanation opens from either, by hover or focus. */
 function Metric(props: {
   label: string;
   tooltip: string | JSX.Element;
@@ -116,31 +115,39 @@ function Metric(props: {
   valueClass: string;
 }) {
   return (
-    <Tooltip
-      content={typeof props.tooltip === "string"
-        ? <span>{props.tooltip}</span>
-        : props.tooltip}
-      position="top"
-      focusable
-      description={props.description ??
-        (typeof props.tooltip === "string" ? props.tooltip : undefined)}
-      triggerClass="min-w-0 flex-1"
-    >
-      <div class="flex min-w-0 flex-1 cursor-help flex-col">
-        <span class="text-[11px] text-text-muted">{props.label}</span>
-        <span
-          class={`mt-0.5 text-lg font-bold leading-tight ${
-            props.value === null ? "text-text-muted" : props.valueClass
-          }`}
-        >
-          {props.value ?? "–"}
-        </span>
-      </div>
-    </Tooltip>
+    <div class="flex min-w-0 flex-1 flex-col items-start">
+      {/* The trigger hugs the text: the empty space beside a short number explains nothing. */}
+      <Tooltip
+        content={typeof props.tooltip === "string"
+          ? <span>{props.tooltip}</span>
+          : props.tooltip}
+        position="top"
+        focusable
+        description={props.description ??
+          (typeof props.tooltip === "string" ? props.tooltip : undefined)}
+        triggerClass="max-w-full"
+      >
+        <div class="flex cursor-help flex-col">
+          <span class="text-[11px] text-text-muted">{props.label}</span>
+          <span
+            class={`mt-0.5 text-lg font-bold leading-tight ${
+              props.value === null ? "text-text-muted" : props.valueClass
+            }`}
+          >
+            {props.value ?? "–"}
+          </span>
+        </div>
+      </Tooltip>
+    </div>
   );
 }
 
-/** One line of the diagnostics; the value is coloured only when it works against the connection. */
+/**
+ * One line of the diagnostics. The label and the value each open the same
+ * explanation; the gap between them is not a trigger. Only the label takes
+ * keyboard focus, so a row is one Tab stop. The value is coloured only when
+ * it works against the connection.
+ */
 function DiagnosticRow(props: {
   label: string;
   tooltip: string;
@@ -148,24 +155,27 @@ function DiagnosticRow(props: {
   valueClass?: string;
 }) {
   return (
-    <Tooltip
-      content={<span>{props.tooltip}</span>}
-      position="top"
-      focusable
-      description={props.tooltip}
-      triggerClass="w-full"
-    >
-      <div class="flex w-full cursor-help items-center justify-between gap-3 py-1 text-xs">
-        <span class="text-text-muted">{props.label}</span>
+    <div class="flex w-full items-center justify-between gap-3 py-1 text-xs">
+      <Tooltip
+        content={<span>{props.tooltip}</span>}
+        position="top"
+        focusable
+        description={props.tooltip}
+      >
+        <span class="cursor-help text-text-muted">{props.label}</span>
+      </Tooltip>
+      <Tooltip content={<span>{props.tooltip}</span>} position="top">
         <span
-          class={props.value === null
-            ? "text-text-muted"
-            : props.valueClass ?? "text-text-primary"}
+          class={`cursor-help ${
+            props.value === null
+              ? "text-text-muted"
+              : props.valueClass ?? "text-text-primary"
+          }`}
         >
           {props.value ?? "–"}
         </span>
-      </div>
-    </Tooltip>
+      </Tooltip>
+    </div>
   );
 }
 
