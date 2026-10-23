@@ -18,6 +18,7 @@ export const BASE_APP_STATE: AppState = {
   syncPhase: null,
   firstRun: false,
   syncRoutes: null,
+  runningSince: null,
   measuring: false,
   syncRecoveryReason: null,
   isUpdateAvailable: false,

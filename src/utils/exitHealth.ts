@@ -129,13 +129,35 @@ export function getSlotLoadLevel(percent: number): LoadLevel {
   return "high";
 }
 
+/** "4 of 10 in use": one slot is one user connected through the exit. */
+export function formatSlotsInUse(exit: ExitData | null): string | null {
+  const l = getSlotLoad(exit);
+  return l ? `${l.used} of ${l.total} in use` : null;
+}
+
+/** How busy the exit's processor is: 1-minute load average over its cores, as a percentage. */
+export function getCpuLoad(exit: ExitData | null): number | null {
+  if (!exit) return null;
+  const { one, nproc } = exit.loadAvg;
+  if (nproc <= 0 || !Number.isFinite(one)) return null;
+  return Math.max(0, Math.round((one / nproc) * 100));
+}
+
+/** Processor-load color band: <50 low, <85 medium, else high. */
+export function getCpuLoadLevel(percent: number): LoadLevel {
+  if (percent < 50) return "low";
+  if (percent < 85) return "medium";
+  return "high";
+}
+
 /** How the live tunnel feels, in one word. */
 export type ConnectionQuality = "good" | "fair" | "poor";
 
 /**
  * Grades a live connection from the same bands the stats use. Unknown latency
- * counts as medium until the first sample; unknown load (an exit that reports
- * no slots) holds nothing against the connection.
+ * counts as medium until the first sample; unknown processor load holds
+ * nothing against the connection. Slots are not a factor: other users'
+ * seats do not slow this tunnel down.
  */
 export function getConnectionQuality(
   latencyMs: number | null,

@@ -3,7 +3,10 @@ import {
   formatConnectionStatus,
   formatDuration,
   formatExitHealthStatus,
+  formatSlotsInUse,
   getConnectionQuality,
+  getCpuLoad,
+  getCpuLoadLevel,
   getExitHealthColor,
   getLatencyLevel,
   getLatencyMs,
@@ -229,5 +232,30 @@ describe("formatDuration", () => {
 
   it("never goes negative when the clock is behind the daemon's", () => {
     expect(formatDuration(-3)).toBe("0 s");
+  });
+});
+
+describe("slots and processor load", () => {
+  const exit = {
+    slots: { total: 10, available: 6, connected: 4 },
+    loadAvg: { one: 2.4, five: 2, fifteen: 1, nproc: 4 },
+    rtt: 100,
+    checkedAt: 0,
+    versions: { versions: ["v1"], latest: "v1" },
+    apiVersion: "v1",
+  };
+
+  it("counts slots as users", () => {
+    expect(formatSlotsInUse(exit)).toBe("4 of 10 in use");
+    expect(formatSlotsInUse(null)).toBeNull();
+  });
+
+  it("reads the processor load over the cores", () => {
+    expect(getCpuLoad(exit)).toBe(60);
+    expect(getCpuLoad({ ...exit, loadAvg: { ...exit.loadAvg, nproc: 0 } }))
+      .toBeNull();
+    expect(getCpuLoadLevel(10)).toBe("low");
+    expect(getCpuLoadLevel(60)).toBe("medium");
+    expect(getCpuLoadLevel(95)).toBe("high");
   });
 });

@@ -28,6 +28,8 @@ import {
   formatSecondsAgo,
   getConnectionQuality,
   getConnectionState,
+  getCpuLoad,
+  getCpuLoadLevel,
   getExitHealthColor,
   getHopCount,
   getLastCheckedEpoch,
@@ -42,6 +44,7 @@ import { levelValueClass } from "../exitNode/levelColor.ts";
 import HopsIcon from "../exitNode/HopsIcon.tsx";
 import StalledTag from "../exitNode/StalledTag.tsx";
 import { WEAK_ROUTE } from "../exitNode/WeakRouteTag.tsx";
+import { isNetworkSettling } from "@src/utils/networkSettling.ts";
 import ChevronIcon from "../common/ChevronIcon.tsx";
 import Tag from "../common/Tag.tsx";
 import Tooltip from "../common/Tooltip.tsx";
@@ -82,6 +85,12 @@ const LATENCY_TOOLTIP = (
     </div>
   </div>
 );
+const SLOTS_TOOLTIP =
+  "Users connected through this exit right now, out of the slots it offers. One slot is one user.";
+const SERVER_LOAD_TOOLTIP =
+  "How busy the exit's processor is, averaged over the last minute.";
+const SETTLING_TOOLTIP =
+  "Paths through the network are still being mapped. This settles a minute or two after start.";
 const CHECKED_TOOLTIP = "Time since last health check";
 const CONNECTED_FOR_TOOLTIP = "How long this session has been up";
 const PATH_TOOLTIP =
@@ -197,27 +206,27 @@ export default function StatusCard(
     const ms = latencyMs();
     return ms === null ? "" : levelValueClass(getLatencyLevel(ms));
   };
-  const load = createMemo(() => getSlotLoad(exit()));
-  const loadLevel = () => {
-    const l = load();
-    return l ? getSlotLoadLevel(l.percent) : null;
+  // Slots are seats: one per user. The processor load is what can slow a tunnel down.
+  const slots = createMemo(() => getSlotLoad(exit()));
+  const slotsValue = () => {
+    const l = slots();
+    return l ? `${l.used} of ${l.total}` : null;
   };
-  const loadValue = () => {
-    const l = load();
-    return l ? `${l.percent}%` : null;
+  const slotsClass = () => {
+    const l = slots();
+    return l ? levelValueClass(getSlotLoadLevel(l.percent)) : "";
   };
-  const loadClass = () => {
-    const level = loadLevel();
-    return level ? levelValueClass(level) : "";
+  const cpu = () => getCpuLoad(exit());
+  const cpuLevel = () => {
+    const percent = cpu();
+    return percent === null ? null : getCpuLoadLevel(percent);
   };
-  const loadTooltip = () => {
-    const l = load();
-    return `Connection slots in use${
-      l ? ` (${l.used} of ${l.total})` : ""
-    }. Lower is better.`;
+  const cpuValue = () => {
+    const percent = cpu();
+    return percent === null ? null : `${percent}%`;
   };
 
-  const quality = () => getConnectionQuality(latencyMs(), loadLevel(), stall());
+  const quality = () => getConnectionQuality(latencyMs(), cpuLevel(), stall());
   // The walk's own verdict, not isWeakRoute: a destination still being checked is not weak yet.
   const isWeak = () => {
     const rh = routeHealth();
@@ -225,6 +234,8 @@ export default function StatusCard(
   };
   const hopCount = () =>
     getHopCount(props.destinationState.destination.routing);
+  // Right after the node started every path reads low; that is the network settling, not this route.
+  const settling = () => isNetworkSettling(appState.runningSince, nowMs());
 
   // Own clock: "Last checked" has to age between status updates.
   const nowMs = createClock(1000);
@@ -302,6 +313,16 @@ export default function StatusCard(
         pulsing: false,
       };
     }
+    if (verdict === "weak" && settling()) {
+      return {
+        prefix: "Network:",
+        text: "Still exploring",
+        class: "text-text-yellow",
+        bars: 1,
+        tone: "amber" as BarTone,
+        pulsing: true,
+      };
+    }
     const bars = verdict === "ready" ? 3 : verdict === "weak" ? 1 : 0;
     const tone: BarTone = verdict === "ready" ? "green" : "amber";
     return {
@@ -328,7 +349,11 @@ export default function StatusCard(
     onCleanup(() => observer.disconnect());
   });
 
-  const toggle = () => setExpanded((open) => !open);
+  const toggle = () => {
+    // Measure on the way open too: a height the observer missed must not keep the panel shut.
+    if (panelRef && !expanded()) setPanelHeightPx(panelRef.scrollHeight);
+    setExpanded((open) => !open);
+  };
 
   // keyed: a new destination gets a fresh card instead of animating the old one's panel height.
   return (
@@ -363,10 +388,12 @@ export default function StatusCard(
                 <span class="truncate">{row().prefix}</span>
                 {/* The verdict is the text itself; a weak route explains itself on hover instead of repeating as a tag. */}
                 <Tooltip
-                  content={<span>{WEAK_ROUTE}</span>}
+                  content={
+                    <span>{settling() ? SETTLING_TOOLTIP : WEAK_ROUTE}</span>
+                  }
                   disabled={isConnected() || !isWeak()}
                   focusable={!isConnected() && isWeak()}
-                  description={WEAK_ROUTE}
+                  description={settling() ? SETTLING_TOOLTIP : WEAK_ROUTE}
                 >
                   <span class={`whitespace-nowrap font-bold ${row().class}`}>
                     {row().text}
@@ -410,10 +437,10 @@ export default function StatusCard(
                 />
                 <div class="ml-4 flex min-w-0 flex-1 border-l border-border pl-4">
                   <Metric
-                    label="Server load"
-                    tooltip={loadTooltip()}
-                    value={loadValue()}
-                    valueClass={loadClass()}
+                    label="Slots in use"
+                    tooltip={SLOTS_TOOLTIP}
+                    value={slotsValue()}
+                    valueClass={slotsClass()}
                   />
                 </div>
               </div>
@@ -421,6 +448,11 @@ export default function StatusCard(
                 <h2 class="mb-0.5 text-[11px] font-bold text-text-muted">
                   Diagnostics
                 </h2>
+                <DiagnosticRow
+                  label="Server load"
+                  tooltip={SERVER_LOAD_TOOLTIP}
+                  value={cpuValue()}
+                />
                 <Show when={isConnected()}>
                   <DiagnosticRow
                     label="Connected for"

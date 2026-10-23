@@ -11,6 +11,9 @@ import {
   formatRelays,
   formatRouting,
   formatSecondsAgo,
+  formatSlotsInUse,
+  getCpuLoad,
+  getCpuLoadLevel,
   getLastCheckedEpoch,
   getLatencyLevel,
   getLatencyMs,
@@ -61,15 +64,22 @@ export default function RouteTooltip(props: {
     }
     return levelClass[level];
   };
-  const load = () => getSlotLoad(props.exit);
-  const loadClass = () => {
-    const l = load();
+  const slots = () => getSlotLoad(props.exit);
+  const slotsClass = () => {
+    const l = slots();
     if (!l) return undefined;
     const level = getSlotLoadLevel(l.percent);
     if (level === "low") {
       return props.grade.kind === "measured" ? levelClass.low : undefined;
     }
     return levelClass[level];
+  };
+  const cpu = () => getCpuLoad(props.exit);
+  const cpuClass = () => {
+    const percent = cpu();
+    if (percent === null) return undefined;
+    const level = getCpuLoadLevel(percent);
+    return level === "low" ? undefined : levelClass[level];
   };
   const pathClass = () => {
     const walk = props.routeHealth?.walk;
@@ -101,9 +111,14 @@ export default function RouteTooltip(props: {
           class={latencyClass()}
         />
         <Row
+          label="Slots"
+          value={formatSlotsInUse(props.exit)}
+          class={slotsClass()}
+        />
+        <Row
           label="Server load"
-          value={load() ? `${load()!.percent}%` : null}
-          class={loadClass()}
+          value={cpu() === null ? null : `${cpu()}%`}
+          class={cpuClass()}
         />
         <Row
           label="Path"

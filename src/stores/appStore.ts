@@ -23,6 +23,7 @@ import {
   type DisconnectingInfo,
   isDeployingSafeRunMode,
   isPreparingSafeRunMode,
+  isRunningRunMode,
   isWarmupRunMode,
   type ProbeView,
   type ReconnectingInfo,
@@ -110,6 +111,8 @@ export interface AppState {
   firstRun: boolean;
   /** How far the daemon's route search has come while the startup screen waits on it. */
   syncRoutes: RouteSearchProgress | null;
+  /** When this app run saw the node reach Running; null if it was already running at launch. */
+  runningSince: number | null;
   /** The first pass of quick probes is still running: "best" is provisional. */
   measuring: boolean;
   syncRecoveryReason: string | null;
@@ -172,6 +175,7 @@ function initialState(): AppState {
     syncPhase: null,
     firstRun: false,
     syncRoutes: null,
+    runningSince: null,
     measuring: false,
     syncRecoveryReason: null,
     isUpdateAvailable: false,
@@ -305,6 +309,13 @@ export function createAppStore(): AppStoreTuple {
     setState("error", undefined);
     setState("currentScreen", screen);
     setState("warmupStatus", warmupStatus);
+    // Seen starting in this run: a low path value is the network settling, not a weak route.
+    if (
+      isRunningRunMode(response.run_mode) && state.runMode !== null &&
+      !isRunningRunMode(state.runMode)
+    ) {
+      setState("runningSince", Date.now());
+    }
     setState("runMode", reconcile(response.run_mode));
     setState("destinations", reconcile(destinations));
     setState("targetDestination", response.target_destination);

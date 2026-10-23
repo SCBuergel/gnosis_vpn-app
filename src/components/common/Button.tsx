@@ -106,7 +106,8 @@ export default function Button(allProps: ButtonProps): JSX.Element {
       onPointerDown={() => playPressAnimation()}
       onClick={() => local.onClick?.()}
     >
-      <div>{local.children}</div>
+      {/* A flex box, not a block: an inline-flex child would sit on the baseline, above centre. */}
+      <div class="flex items-center justify-center">{local.children}</div>
     </button>
   );
 }

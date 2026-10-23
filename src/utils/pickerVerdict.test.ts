@@ -48,6 +48,17 @@ describe("pickerVerdict", () => {
       });
   });
 
+  it("calls a weak route 'still exploring' while the node settles", () => {
+    expect(
+      pickerVerdict({ kind: "weak" }, weakRouteHealth(), null, false, true)
+        .headline,
+    ).toBe("Still exploring");
+    expect(
+      pickerVerdict({ kind: "weak" }, weakRouteHealth(), null, false, false)
+        .headline,
+    ).toBe("Weak route");
+  });
+
   it("explains a weak route and a pending check", () => {
     expect(pickerVerdict({ kind: "weak" }, weakRouteHealth(), null)).toEqual({
       headline: "Weak route",

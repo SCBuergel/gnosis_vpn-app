@@ -10,6 +10,7 @@ import {
   rankContext,
 } from "@src/utils/destinations.ts";
 import { pickerGrade, pickerVerdict } from "@src/utils/pickerVerdict.ts";
+import { isNetworkSettling } from "@src/utils/networkSettling.ts";
 import {
   canBeFirstConnect,
   needsFirstConnect,
@@ -52,8 +53,10 @@ export default function LocationRow(props: {
       appState.destinations,
       rankContext(appState),
     );
+  const settling = () =>
+    isNetworkSettling(appState.runningSince, props.nowSec * 1000);
   const verdict = () =>
-    pickerVerdict(grade(), routeHealth(), exit(), firstConnect());
+    pickerVerdict(grade(), routeHealth(), exit(), firstConnect(), settling());
   const connected = () =>
     appState.connected?.destination_id === destination().id;
   const tunnelRtt = () =>

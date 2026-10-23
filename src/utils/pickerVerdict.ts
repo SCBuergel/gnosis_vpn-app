@@ -56,6 +56,13 @@ const WEAK: PickerVerdict = {
     "Connects, but the path through the network is unreliable right now.",
 };
 
+/** A low path value right after the node started: the network, not the route, is the reason. */
+const SETTLING: PickerVerdict = {
+  headline: "Still exploring",
+  context:
+    "Paths through the network are still being mapped. This settles a minute or two after start.",
+};
+
 const CHECKING: PickerVerdict = {
   headline: "Checking…",
   context: "Measuring this location. Takes a few seconds.",
@@ -72,12 +79,14 @@ export function pickerVerdict(
   exit: ExitData | null,
   // The node has no channels yet: a dead end today is where the first connect goes.
   firstConnect = false,
+  // The node started a moment ago: every path reads low until its relays are confirmed.
+  settling = false,
 ): PickerVerdict {
   switch (grade.kind) {
     case "measured":
       return MEASURED[grade.bars];
     case "weak":
-      return WEAK;
+      return settling ? SETTLING : WEAK;
     case "unmeasured":
       return CHECKING;
     case "none": {
