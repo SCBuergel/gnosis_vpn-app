@@ -3,6 +3,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import type { ServiceInfo } from "@src/services/vpnService.ts";
 import Spinner from "@src/components/common/Spinner.tsx";
 import GnosisVpnLogo from "@src/components/common/GnosisVpnLogo.tsx";
+import { describeStartupError } from "@src/utils/startupError.ts";
 
 interface InitializationProps {
   info: ServiceInfo | null;
@@ -40,10 +41,33 @@ export default function Initialization(props: InitializationProps) {
       <div class="absolute inset-x-0 top-[var(--golden-content-y)] flex flex-col items-center px-8 transition-opacity duration-300 ease-out starting:opacity-0">
         {props.error
           ? (
-            <div class="text-status-error">
-              <p class="mb-2 font-bold">Critical error during initialization</p>
-              <p class="text-sm">{props.error}</p>
-            </div>
+            <Show when={describeStartupError(props.error)} keyed>
+              {(view) => (
+                <div
+                  class={`flex flex-col items-center ${
+                    view.waiting ? "text-text-primary" : "text-status-error"
+                  }`}
+                >
+                  <Show when={view.waiting}>
+                    <Spinner class="mb-4 h-8 w-8 text-brand-primary" />
+                  </Show>
+                  <p class="mb-2 font-bold">{view.title}</p>
+                  <Show when={view.detail}>
+                    <p class="text-sm text-text-secondary">{view.detail}</p>
+                  </Show>
+                  <Show when={view.hint}>
+                    {(hint) => (
+                      <code class="mt-3 select-text rounded-md bg-bg-surface px-2.5 py-1.5 text-xs text-text-primary">
+                        {hint()}
+                      </code>
+                    )}
+                  </Show>
+                  <Show when={view.raw}>
+                    {(raw) => <p class="mt-2 select-text text-xs">{raw()}</p>}
+                  </Show>
+                </div>
+              )}
+            </Show>
           )
           : (
             <div class="flex flex-col items-center">
