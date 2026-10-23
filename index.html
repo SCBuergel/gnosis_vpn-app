@@ -32,13 +32,13 @@
       padding: 0 1.5rem;
       box-sizing: border-box;
     }
-    /* Mirrors --golden-logo-y in index.css; this copy renders before that stylesheet exists. */
+    /* Mirrors the logo in GettingReady.tsx (w-44, pt-10, centred); this copy renders before that stylesheet exists. */
     #root .loading-screen .logo-anchor {
       position: absolute;
-      left: 1.5rem;
-      right: 1.5rem;
-      top: 38.2%;
-      transform: translateY(-50%);
+      left: 50%;
+      width: 11rem;
+      top: 2.5rem;
+      transform: translateX(-50%);
     }
     /* display:block matches Tailwind's preflight on the Solid copy, which has no inline baseline gap. */
     #root .loading-screen .logo-svg {

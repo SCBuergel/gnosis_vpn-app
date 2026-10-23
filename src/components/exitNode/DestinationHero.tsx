@@ -56,7 +56,16 @@ export default function DestinationHero(props: {
   const [frame, setFrame] = createSignal<PickerFrame | null>(null);
   let changeButtonRef: HTMLButtonElement | undefined;
 
+  const closeList = (picked: string | null) => {
+    appActions.destinationListClosed(picked);
+    changeButtonRef?.focus();
+  };
+  // The button toggles: pressing it again while the picker is open closes it.
   const openList = () => {
+    if (appState.mode.listOpen) {
+      closeList(null);
+      return;
+    }
     // A page may have unmounted the hero while its registration lives on in MainScreen.
     if (!changeButtonRef?.isConnected) return;
     setAnchor(changeButtonRef.getBoundingClientRect());
@@ -64,10 +73,6 @@ export default function DestinationHero(props: {
     appActions.destinationListOpened();
   };
   props.registerOpenPicker?.(openList);
-  const closeList = (picked: string | null) => {
-    appActions.destinationListClosed(picked);
-    changeButtonRef?.focus();
-  };
 
   return (
     <div class="flex w-full flex-col items-center gap-2.5 text-center">
@@ -139,7 +144,12 @@ export default function DestinationHero(props: {
 
       <Show when={appState.mode.listOpen && anchor()}>
         {(rect) => (
-          <LocationPicker anchor={rect()} frame={frame()} onClose={closeList} />
+          <LocationPicker
+            anchor={rect()}
+            frame={frame()}
+            opener={changeButtonRef}
+            onClose={closeList}
+          />
         )}
       </Show>
     </div>

@@ -18,6 +18,13 @@ describe("describeStartupError", () => {
       ).hint,
     )
       .toBeNull();
+    // What the backend reports when the app starts before the daemon's socket exists.
+    expect(
+      describeStartupError(
+        "Error processing status update: not available",
+        "linux",
+      ).waiting,
+    ).toBe(true);
   });
 
   it("names a schema mismatch and keeps the daemon's words", () => {

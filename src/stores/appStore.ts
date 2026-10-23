@@ -21,6 +21,8 @@ import {
   type Destination,
   type DestinationState,
   type DisconnectingInfo,
+  isDeployingSafeRunMode,
+  isPreparingSafeRunMode,
   isWarmupRunMode,
   type ProbeView,
   type ReconnectingInfo,
@@ -67,7 +69,8 @@ import {
   AppScreen,
   createScreenSelector,
   detectSyncPhase,
-  MAXIMUM_DELAY_TIME,
+  type RouteSearchProgress,
+  routeSearchProgress,
   type SyncPhaseIndex,
 } from "@src/stores/screenSelector.ts";
 
@@ -101,9 +104,12 @@ export interface AppState {
   runMode: RunMode | null;
   vpnStatus: string;
   warmupStatus: string;
-  syncProgress: number;
-  // Which startup step the daemon is in while the sync screen shows.
+  // Which startup step the daemon is in while the startup screen shows.
   syncPhase: SyncPhaseIndex | null;
+  /** The Safe was set up during this app run, so the startup list shows that step. */
+  firstRun: boolean;
+  /** How far the daemon's route search has come while the startup screen waits on it. */
+  syncRoutes: RouteSearchProgress | null;
   /** The first pass of quick probes is still running: "best" is provisional. */
   measuring: boolean;
   syncRecoveryReason: string | null;
@@ -163,8 +169,9 @@ function initialState(): AppState {
     serviceInfo: null,
     vpnStatus: "ServiceUnavailable",
     warmupStatus: "",
-    syncProgress: 0,
     syncPhase: null,
+    firstRun: false,
+    syncRoutes: null,
     measuring: false,
     syncRecoveryReason: null,
     isUpdateAvailable: false,
@@ -189,127 +196,13 @@ function initialState(): AppState {
   };
 }
 
-// Phase boundaries and expected durations for sync progress estimation.
-// floor/ceiling are % values; durationMs is the expected phase duration.
-// Calibrated 2026-10-12 on jura-prod (fresh onboarding): safe 45s, warmup 30s, delay 97s.
-const SYNC_PHASES = [
-  { floor: 0, ceiling: 25, durationMs: 60_000 }, // DeployingSafe
-  { floor: 25, ceiling: 40, durationMs: 45_000 }, // Warmup
-  { floor: 40, ceiling: 100, durationMs: MAXIMUM_DELAY_TIME }, // Channels/peers delay
-] as const;
-
 export function createAppStore(): AppStoreTuple {
   const [state, setState] = createStore<AppState>(initialState());
 
   let unlistenServiceInfo: (() => void) | undefined;
   let unlistenStatusUpdate: (() => void) | undefined;
   let unlistenBalanceUpdate: (() => void) | undefined;
-  let activeSyncPhase: SyncPhaseIndex | null = null;
-  let syncPhaseStartTime = 0;
-  let syncPhaseStartProgress = 0;
-  let recovering = false;
-  // Taken on the first tick, after any catch-up to the phase floor.
-  let recoveryStart: { at: number; progress: number } | null = null;
-  let syncTimer: ReturnType<typeof setInterval> | undefined;
-  let catchUpTarget: number | null = null;
-  let pendingScreenTransition: AppScreen | null = null;
   const selectScreen = createScreenSelector();
-
-  const CATCH_UP_SPEED = 6.6; // % per 100ms tick
-  const TICK_INTERVAL = 100; // ms
-  const CEILING_CREEP = 0.01; // % per second at a phase ceiling, so the counter never freezes
-
-  const tickSyncProgress = () => {
-    const current = state.syncProgress;
-    if (catchUpTarget !== null) {
-      const next = Math.min(current + CATCH_UP_SPEED, catchUpTarget);
-      setState("syncProgress", next);
-      if (next >= catchUpTarget) {
-        catchUpTarget = null;
-        if (pendingScreenTransition !== null) {
-          setState("currentScreen", pendingScreenTransition);
-          pendingScreenTransition = null;
-          stopSyncProgress();
-        }
-      }
-      return;
-    }
-    if (activeSyncPhase === null) return;
-    if (recovering) {
-      recoveryStart ??= { at: Date.now(), progress: current };
-      const creepSeconds = Math.floor((Date.now() - recoveryStart.at) / 1000);
-      setState(
-        "syncProgress",
-        Math.min(100, recoveryStart.progress + creepSeconds * CEILING_CREEP),
-      );
-      return;
-    }
-    const phase = SYNC_PHASES[activeSyncPhase];
-    const elapsed = Date.now() - syncPhaseStartTime;
-    // A regression (2→1) can start above this phase's ceiling: creep from there at once.
-    const startsAtCeiling = syncPhaseStartProgress >= phase.ceiling;
-    const linear = syncPhaseStartProgress +
-      (elapsed / phase.durationMs) * (phase.ceiling - syncPhaseStartProgress);
-    const base = startsAtCeiling
-      ? syncPhaseStartProgress
-      : Math.min(linear, phase.ceiling);
-    const creepMs = startsAtCeiling
-      ? elapsed
-      : Math.max(0, elapsed - phase.durationMs);
-    const next = Math.min(
-      100,
-      base + Math.floor(creepMs / 1000) * CEILING_CREEP,
-    );
-    setState("syncProgress", Math.max(current, next));
-  };
-
-  // When advancing to a later phase, animate quickly to the phase boundary.
-  // When entering sync for the first time mid-process, animate from 0 to the phase floor.
-  const enterSyncPhase = (next: SyncPhaseIndex | null) => {
-    if (next === null || activeSyncPhase === next) return;
-    logInfo(`Sync phase ${next} entered`);
-    // A completed earlier sync left progress at 100.
-    if (activeSyncPhase === null) setState("syncProgress", 0);
-    syncPhaseStartProgress = Math.max(
-      SYNC_PHASES[next].floor,
-      state.syncProgress,
-    );
-    if (activeSyncPhase !== null && next > activeSyncPhase) {
-      catchUpTarget = syncPhaseStartProgress;
-    } else if (activeSyncPhase === null && next > 0) {
-      catchUpTarget = syncPhaseStartProgress;
-    }
-    activeSyncPhase = next;
-    syncPhaseStartTime = Date.now();
-    // Recapture after the catch-up, or recovery would rewind to the old phase's progress.
-    recoveryStart = null;
-    if (!syncTimer) {
-      syncTimer = setInterval(tickSyncProgress, TICK_INTERVAL);
-    }
-  };
-
-  // Animate to 100% then transition to the next screen.
-  const completeSyncAndTransition = (screen: AppScreen) => {
-    logInfo(`Sync complete, transitioning to ${screen} screen`);
-    pendingScreenTransition = screen;
-    catchUpTarget = 100;
-    if (!syncTimer) {
-      syncTimer = setInterval(tickSyncProgress, TICK_INTERVAL);
-    }
-  };
-
-  /**
-   * stops sync progress ticks
-   * syncing is reset via initializeApp function if needed
-   */
-  const stopSyncProgress = () => {
-    clearInterval(syncTimer);
-    syncTimer = undefined;
-    activeSyncPhase = null;
-    recovering = false;
-    catchUpTarget = null;
-    pendingScreenTransition = null;
-  };
 
   const [settings, settingsActions] = useSettingsStore();
 
@@ -343,7 +236,6 @@ export function createAppStore(): AppStoreTuple {
   const criticalError = (message: string) => {
     // status errors repeat every poll tick; log only when the message changes
     if (state.error !== message) logError(message);
-    stopSyncProgress();
     const savedServiceInfo = state.serviceInfo;
     // The toolkit probe does not go through the daemon (it reads the version
     // file itself), so a daemon error says nothing about its result: keep it.
@@ -369,6 +261,14 @@ export function createAppStore(): AppStoreTuple {
       freshNode,
     );
     setState("syncPhase", detectSyncPhase(response));
+    setState("syncRoutes", routeSearchProgress(response));
+    // Onboarding and the deployment both mean the Safe is new to this run.
+    if (
+      isPreparingSafeRunMode(response.run_mode) ||
+      isDeployingSafeRunMode(response.run_mode)
+    ) {
+      setState("firstRun", true);
+    }
     if (isWarmupRunMode(response.run_mode)) {
       const lastError = response.run_mode.Warmup.last_error;
       // The daemon retries warmup; only outside the sync screen is that fatal.
@@ -381,26 +281,6 @@ export function createAppStore(): AppStoreTuple {
       logError(recoveryReason);
     }
     setState("syncRecoveryReason", recoveryReason);
-    if (recoveryReason && !recovering) {
-      recovering = true;
-      recoveryStart = null;
-    } else if (!recoveryReason && recovering) {
-      // The retry redoes the phase's work, so its budget restarts from here.
-      recovering = false;
-      syncPhaseStartProgress = state.syncProgress;
-      syncPhaseStartTime = Date.now();
-    }
-
-    if (screen === AppScreen.Synchronization) {
-      enterSyncPhase(detectSyncPhase(response));
-    } else if (
-      state.currentScreen === AppScreen.Synchronization &&
-      pendingScreenTransition === null
-    ) {
-      completeSyncAndTransition(screen);
-    } else if (pendingScreenTransition === null) {
-      stopSyncProgress();
-    }
     const destinations = Object.fromEntries(
       response.destinations.map((ds) => [ds.destination.id, ds]),
     );
@@ -411,9 +291,7 @@ export function createAppStore(): AppStoreTuple {
     logPrefMsg(availableDestinations);
     logStatus(response);
     setState("error", undefined);
-    if (pendingScreenTransition === null) {
-      setState("currentScreen", screen);
-    }
+    setState("currentScreen", screen);
     setState("warmupStatus", warmupStatus);
     setState("runMode", reconcile(response.run_mode));
     setState("destinations", reconcile(destinations));
@@ -658,8 +536,6 @@ export function createAppStore(): AppStoreTuple {
 
   const actions = {
     initializeApp: async () => {
-      stopSyncProgress();
-      setState("syncProgress", 0);
       // Independent of the daemon: the toolkit reads the version file itself,
       // so the package version is known even when the daemon is down.
       void refreshToolkit();

@@ -1,11 +1,17 @@
 import { MainScreen } from "../screens/main/MainScreen.tsx";
 import { Dynamic } from "solid-js/web";
 import { AppScreen, AppState, useAppStore } from "@src/stores/appStore.ts";
-import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
+import {
+  createEffect,
+  createSignal,
+  on,
+  onCleanup,
+  onMount,
+  untrack,
+} from "solid-js";
 import { useSettingsStore } from "@src/stores/settingsStore.ts";
 import Onboarding from "../screens/main/Onboarding.tsx";
-import Synchronization from "../screens/main/Synchronization.tsx";
-import Initialization from "../screens/main/Initialization.tsx";
+import GettingReady from "../screens/main/GettingReady.tsx";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
@@ -70,18 +76,19 @@ function handleNavigate(
  */
 function mapStoreToScreenProps(screen: ValidScreen, state: AppState) {
   switch (screen) {
+    // One screen for both: before the service answers and while the daemon starts up.
     case "initialization":
-      return {
-        info: state.serviceInfo,
-        packageVersion: state.packageVersion,
-        error: state.error,
-      };
     case "synchronization":
       return {
-        syncProgress: state.syncProgress,
+        connected: screen === "synchronization",
+        error: state.error,
         phase: state.syncPhase,
+        firstRun: state.firstRun,
         statusLine: state.warmupStatus,
+        routes: state.syncRoutes,
         recoveryReason: state.syncRecoveryReason,
+        info: state.serviceInfo,
+        packageVersion: state.packageVersion,
       };
     case "main":
     case "onboarding":
@@ -91,10 +98,10 @@ function mapStoreToScreenProps(screen: ValidScreen, state: AppState) {
 }
 
 const screens = {
-  initialization: Initialization,
+  initialization: GettingReady,
   main: MainScreen,
   onboarding: Onboarding,
-  synchronization: Synchronization,
+  synchronization: GettingReady,
 } as const;
 
 function App() {
@@ -166,7 +173,10 @@ function App() {
 
     const now = Date.now();
     const elapsed = now - lastChangeTime;
-    const minDelay = MIN_SCREEN_DISPLAY_TIME;
+    // The same component on both sides only changes its props: nothing to hold back for.
+    const minDelay = screens[nextScreen] === screens[untrack(displayedScreen)]
+      ? 0
+      : MIN_SCREEN_DISPLAY_TIME;
 
     if (elapsed >= minDelay) {
       // If it's been longer than minDelay, change immediately

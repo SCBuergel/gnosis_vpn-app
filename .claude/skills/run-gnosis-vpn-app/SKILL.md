@@ -53,12 +53,12 @@ from drifting — and it has: the splash once rendered 9px wider, because an
 absolutely positioned `<svg>` carrying `width`/`height` attributes is a replaced
 element whose `width: auto` resolves to the intrinsic width, ignoring `right`.
 Screenshots alone won't catch that; compare the rects. Run it after touching the
-splash markup/CSS, `GnosisVpnLogo.tsx`, or `Initialization.tsx`'s layout.
+splash markup/CSS, `GnosisVpnLogo.tsx`, or `GettingReady.tsx`'s layout.
 
-The step navigates to `initialization` itself (the screen that succeeds the
-splash), so it needs no fixture setup. The splash rect is captured by a probe
-the driver injects at parse time — by the load event the entry module has
-already wiped it.
+The step navigates to `initialization` itself (the "Getting ready" screen that
+succeeds the splash; `synchronization` renders the same component), so it needs
+no fixture setup. The splash rect is captured by a probe the driver injects at
+parse time — by the load event the entry module has already wiped it.
 
 Browser console warnings/errors are relayed to stderr — watch for
 `[tauri-shim] unhandled invoke: <command>`, which means the shim needs a new
@@ -169,7 +169,7 @@ deno run -A .claude/skills/run-gnosis-vpn-app/driver.ts \
 Fixture shapes must satisfy the zod schemas in `src/services/vpnService.ts`
 (`StatusResponseSchema`, `BalanceResponseSchema`) — amounts are wei integer
 _strings_. An invalid fixture triggers `criticalError` and the app never leaves
-the Initialization screen.
+the Getting ready screen (its first step then shows the error).
 
 ## Run (human path)
 
@@ -188,7 +188,7 @@ nix fmt
 ## Gotchas
 
 - **The static splash trap.** A screenshot showing only the centered "Gnosis
-  VPN" wordmark — no spinner, no version line — is NOT the Initialization
+  VPN" wordmark — no step list, no version line — is NOT the Getting ready
   screen; it is the static fallback markup baked into `index.html`. It means the
   Solid app never mounted, almost always because `getCurrentWindow()` threw
   (no/broken `__TAURI_INTERNALS__`).

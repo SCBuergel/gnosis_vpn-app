@@ -1,4 +1,4 @@
-import { createMemo, Show } from "solid-js";
+import { createMemo, createUniqueId, Show } from "solid-js";
 import type { DestinationState } from "@src/services/vpnService.ts";
 import { useAppStore } from "@src/stores/appStore.ts";
 import {
@@ -15,7 +15,7 @@ import {
   needsFirstConnect,
 } from "@src/utils/firstConnect.ts";
 import Flag from "../Flag.tsx";
-import CardTooltip from "./CardTooltip.tsx";
+import Tooltip from "../common/Tooltip.tsx";
 import RouteTooltip from "./RouteTooltip.tsx";
 import SignalBars from "./SignalBars.tsx";
 
@@ -26,12 +26,14 @@ export default function LocationRow(props: {
   highlighted: boolean;
   // Live clock for "Checked"; the picker owns it so the rows share one.
   nowSec: number;
-  // Shows the bars' tooltip without a pointer, e.g. for the keyboard-highlighted row.
+  // Shows the row's tooltip without a pointer, e.g. for the keyboard-highlighted row.
   tooltipOpen?: boolean;
   onHover: () => void;
   onPick: () => void;
 }) {
   const [appState] = useAppStore();
+  const descriptionId = createUniqueId();
+  let barsRef: HTMLSpanElement | undefined;
 
   const destination = () => props.destinationState.destination;
   const exit = createMemo(() =>
@@ -68,65 +70,73 @@ export default function LocationRow(props: {
       .filter(Boolean)
       .join(", ");
 
+  // Hovering anywhere on the row shows the route's details; the bubble hangs on
+  // the bars column so it flips above or below without covering the row itself.
   return (
-    <div
-      role="option"
-      aria-selected={props.highlighted}
-      aria-disabled={!pickable()}
-      aria-label={accessibleName()}
-      data-pickable={pickable()}
-      class="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs"
-      classList={{
-        "bg-accent text-accent-text": props.highlighted,
-        "text-text-primary": !props.highlighted,
-        "opacity-50": !pickable(),
-      }}
-      onMouseEnter={props.onHover}
-      onClick={() => pickable() && props.onPick()}
+    <Tooltip
+      content={
+        <RouteTooltip
+          verdict={verdict()}
+          grade={grade()}
+          routeHealth={routeHealth()}
+          exit={exit()}
+          tunnelRtt={tunnelRtt()}
+          routing={destination().routing}
+          connected={connected()}
+          nowSec={props.nowSec}
+        />
+      }
+      triggerClass="w-full"
+      anchor={() => barsRef}
+      position="auto"
+      align="end"
+      open={props.tooltipOpen}
+      bubbleClass="max-w-64"
     >
-      <Flag code={destinationFlag(destination())} size="sm" />
-      <span class="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span class="truncate font-semibold">
-          {destinationTitle(destination())}
+      <div
+        role="option"
+        aria-selected={props.highlighted}
+        aria-disabled={!pickable()}
+        aria-label={accessibleName()}
+        aria-describedby={descriptionId}
+        data-pickable={pickable()}
+        class="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs"
+        classList={{
+          "bg-accent text-accent-text": props.highlighted,
+          "text-text-primary": !props.highlighted,
+          "opacity-50": !pickable(),
+        }}
+        onMouseEnter={props.onHover}
+        onClick={() => pickable() && props.onPick()}
+      >
+        <Flag code={destinationFlag(destination())} size="sm" />
+        <span class="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span class="truncate font-semibold">
+            {destinationTitle(destination())}
+          </span>
+          <Show when={destinationCountry(destination())}>
+            {(country) => (
+              <span
+                class="truncate text-[11px]"
+                classList={{
+                  "text-accent-text/80": props.highlighted,
+                  "text-text-secondary": !props.highlighted,
+                }}
+              >
+                {country()}
+              </span>
+            )}
+          </Show>
         </span>
-        <Show when={destinationCountry(destination())}>
-          {(country) => (
-            <span
-              class="truncate text-[11px]"
-              classList={{
-                "text-accent-text/80": props.highlighted,
-                "text-text-secondary": !props.highlighted,
-              }}
-            >
-              {country()}
-            </span>
-          )}
-        </Show>
-      </span>
-      {/* One column: every row's bars sit at the same x, whatever their state. */}
-      <span class="flex w-5 shrink-0 justify-end">
-        <CardTooltip
-          tooltip={
-            <RouteTooltip
-              verdict={verdict()}
-              grade={grade()}
-              routeHealth={routeHealth()}
-              exit={exit()}
-              tunnelRtt={tunnelRtt()}
-              routing={destination().routing}
-              connected={connected()}
-              nowSec={props.nowSec}
-            />
-          }
-          description={`${verdict().headline}. ${verdict().context}`}
-          position="auto"
-          align="end"
-          open={props.tooltipOpen}
-          bubbleClass="max-w-64"
-        >
+        {/* One column: every row's bars sit at the same x, whatever their state. */}
+        <span ref={barsRef} class="flex w-5 shrink-0 justify-end">
           <SignalBars grade={grade()} highlighted={props.highlighted} />
-        </CardTooltip>
+        </span>
+      </div>
+      {/* Always in the DOM so the description resolves; the portalled bubble mounts too late for that. */}
+      <span id={descriptionId} class="sr-only">
+        {`${verdict().headline}. ${verdict().context}`}
       </span>
-    </div>
+    </Tooltip>
   );
 }

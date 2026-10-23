@@ -33,6 +33,9 @@ export default function Tooltip(props: {
   bubbleClass?: string;
   // id for the bubble, so a trigger can point at it with aria-describedby.
   id?: string;
+  // The element the bubble hangs on when it is not the whole trigger, e.g. one
+  // cell of a row that shows the tooltip wherever it is hovered.
+  anchor?: () => HTMLElement | null | undefined;
 }) {
   const [visible, setVisible] = createSignal(false);
   const [triggerRect, setTriggerRect] = createSignal<DOMRect | null>(null);
@@ -49,7 +52,8 @@ export default function Tooltip(props: {
   const preferred = () => props.position ?? "top";
 
   const updateAnchor = () => {
-    setTriggerRect(triggerRef.getBoundingClientRect());
+    const anchor = props.anchor?.() ?? triggerRef;
+    setTriggerRect(anchor.getBoundingClientRect());
     setRemeasure((n) => n + 1);
   };
 
@@ -147,7 +151,7 @@ export default function Tooltip(props: {
             ref={bubbleRef}
             id={props.id}
             role="tooltip"
-            class={`fixed z-200 w-max rounded-lg bg-neutral-800 px-3 py-2 shadow-lg text-xs leading-relaxed text-gray-100 -translate-x-1/2 transition-[opacity,scale] duration-150 ease-out starting:opacity-0 starting:scale-95 ${
+            class={`pointer-events-none fixed z-200 w-max rounded-lg bg-neutral-800 px-3 py-2 shadow-lg text-xs leading-relaxed text-gray-100 -translate-x-1/2 transition-[opacity,scale] duration-150 ease-out starting:opacity-0 starting:scale-95 ${
               props.bubbleClass ?? "max-w-52"
             }`}
             style={{ ...anchorStyle(), left: `${left()}px` }}

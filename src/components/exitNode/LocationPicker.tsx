@@ -61,6 +61,8 @@ function step<T>(
 export default function LocationPicker(props: {
   // Where the opening button sits; the arrow points at its middle.
   anchor: DOMRect;
+  // The button that opened the picker: a press on it is the opener's toggle, not an outside click.
+  opener?: HTMLElement;
   // The edges to span and the floor to stop at; without it, centred under the anchor.
   frame: PickerFrame | null;
   // The destination chosen, or null when the picker was dismissed.
@@ -143,8 +145,11 @@ export default function LocationPicker(props: {
     appState.destinations[id] ??
       ({ destination: fallback, route_health: null } as DestinationState);
   const currentId = () => effectiveActive(appState.mode, Date.now());
+  // Each row sits inside its tooltip's trigger wrapper.
+  const rowAt = (i: number) =>
+    listRef?.children[i]?.querySelector('[role="option"]') ?? null;
   const isPickable = (i: number) =>
-    listRef?.children[i]?.getAttribute("data-pickable") === "true";
+    rowAt(i)?.getAttribute("data-pickable") === "true";
 
   // The highlight starts on the current location and follows the filter.
   onMount(() => {
@@ -215,6 +220,7 @@ export default function LocationPicker(props: {
     const target = e.target instanceof Node ? e.target : null;
     if (showUnreachable()) return;
     if (target && popoverRef?.contains(target)) return;
+    if (target && props.opener?.contains(target)) return;
     props.onClose(null);
   };
   onMount(() => {

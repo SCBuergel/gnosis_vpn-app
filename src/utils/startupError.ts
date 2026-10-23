@@ -15,8 +15,9 @@ export interface StartupErrorView {
   raw: string | null;
 }
 
+// "not available" is what the backend says while the daemon's socket is absent at app start.
 const NOT_RUNNING =
-  /service not running|connection refused|os error (2|111)\b/i;
+  /service not running|connection refused|os error (2|111)\b|not available/i;
 const MISMATCH = /invalid (status|service_info)/i;
 
 // Only the Linux unit name is known for sure (the apt package installs `gnosisvpn`).

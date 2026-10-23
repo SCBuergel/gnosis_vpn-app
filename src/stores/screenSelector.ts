@@ -57,6 +57,24 @@ function retryingSafeDeployment(status: StatusResponse): string | null {
   return safe.error;
 }
 
+/** How far the daemon's route search has come: exits it has walked, out of all it lists. */
+export interface RouteSearchProgress {
+  walked: number;
+  total: number;
+}
+
+export function routeSearchProgress(
+  status: StatusResponse,
+): RouteSearchProgress {
+  const total = status.destinations.length;
+  const walked = status.destinations.filter((ds) =>
+    ds.route_health !== null &&
+    (ds.route_health.walk !== null ||
+      ds.route_health.state.state === "Unrecoverable")
+  ).length;
+  return { walked, total };
+}
+
 export function detectSyncPhase(
   response: StatusResponse,
 ): SyncPhaseIndex | null {

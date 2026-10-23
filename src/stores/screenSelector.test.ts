@@ -21,12 +21,14 @@ import {
   AppScreen,
   createScreenSelector,
   detectSyncPhase,
+  routeSearchProgress,
 } from "./screenSelector.ts";
 import {
   checkedQuickProbe,
   eligibleRouteHealth,
   makeDestination,
   noPathRouteHealth,
+  unrecoverableRouteHealth,
   weakRouteHealth,
 } from "@src/testing/destinations.ts";
 
@@ -257,5 +259,28 @@ describe("detectSyncPhase", () => {
       detectSyncPhase(status(RUNNING, [destination(eligibleRouteHealth())])),
     )
       .toBeNull();
+  });
+});
+
+describe("routeSearchProgress", () => {
+  it("counts the exits the daemon has walked or written off", () => {
+    const unwalked = { ...eligibleRouteHealth(), walk: null };
+    expect(
+      routeSearchProgress(
+        status(RUNNING, [
+          destination(noPathRouteHealth()),
+          destination(unrecoverableRouteHealth()),
+          destination(unwalked),
+          { destination: makeDestination(), route_health: null },
+        ]),
+      ),
+    ).toEqual({ walked: 2, total: 4 });
+  });
+
+  it("is empty before the daemon lists anything", () => {
+    expect(routeSearchProgress(status(WARMUP))).toEqual({
+      walked: 0,
+      total: 0,
+    });
   });
 });
