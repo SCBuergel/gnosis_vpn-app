@@ -255,7 +255,7 @@ export default function StatusCard(
     if (isConnected()) {
       const q = QUALITY[quality()];
       return {
-        prefix: "Connection quality:",
+        prefix: "Quality:",
         text: q.text,
         class: q.class,
         bars: q.bars,
@@ -265,7 +265,7 @@ export default function StatusCard(
     }
     if (inFlight()) {
       return {
-        prefix: "Network status:",
+        prefix: "Network:",
         text: "Connecting…",
         class: "text-text-yellow",
         bars: 0,
@@ -276,7 +276,7 @@ export default function StatusCard(
     const rh = routeHealth();
     if (!rh) {
       return {
-        prefix: "Network status:",
+        prefix: "Network:",
         text: "Unavailable",
         class: statusColorClass.gray,
         bars: 0,
@@ -294,7 +294,7 @@ export default function StatusCard(
       )
     ) {
       return {
-        prefix: "Network status:",
+        prefix: "Network:",
         text: FIRST_CONNECT.headline,
         class: statusColorClass.green,
         bars: 0,
@@ -305,7 +305,7 @@ export default function StatusCard(
     const bars = verdict === "ready" ? 3 : verdict === "weak" ? 1 : 0;
     const tone: BarTone = verdict === "ready" ? "green" : "amber";
     return {
-      prefix: "Network status:",
+      prefix: "Network:",
       text: formatExitHealthStatus(rh, exit()),
       class: statusColorClass[getExitHealthColor(rh, exit())],
       bars,
