@@ -94,7 +94,7 @@ export default function UpdateStatusCard(props: UpdateStatusCardProps) {
   const actionButton = (
     <button
       type="button"
-      class={`h-8 shrink-0 rounded-md border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50 ${
+      class={`h-8 shrink-0 rounded-md border px-3 text-sm font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-50 ${
         updateAvailable()
           ? "border-vpn-light-green/40 bg-vpn-light-green/15 text-text-green hover:enabled:bg-vpn-light-green/25"
           : "border-border bg-transparent text-text-primary hover:enabled:bg-darken"
@@ -155,7 +155,7 @@ export default function UpdateStatusCard(props: UpdateStatusCardProps) {
             <Show when={!busy()}>
               <button
                 type="button"
-                class="flex size-8 items-center justify-center rounded-md border border-border text-text-secondary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-accent"
+                class="flex size-8 items-center justify-center rounded-md border border-border text-text-secondary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-focus"
                 title="Check again"
                 aria-label="Check again"
                 onClick={() => props.onCheck?.()}

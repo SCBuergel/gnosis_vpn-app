@@ -241,7 +241,7 @@ export function routeGrade(
   return { kind: "measured", bars: latencyBars(exit.rtt / 2) };
 }
 
-/** Measured eligible first (by score), then unmeasured eligible (by resilience), then the rest (by closeness). */
+/** Measured eligible first (fastest first, score breaking ties), then unmeasured eligible (by resilience), then the rest (by closeness). */
 export function sortByRouteQuality(
   destinations: Record<string, DestinationState>,
   context: RankContext,
@@ -259,16 +259,12 @@ export function sortByRouteQuality(
     if (tierA !== tierB) return tierA - tierB;
 
     if (tierA === 0) {
-      const scoreA = score(
-        stateA,
-        getExitData(stateA, context.probe)!,
-        context,
-      );
-      const scoreB = score(
-        stateB,
-        getExitData(stateB, context.probe)!,
-        context,
-      );
+      // The fastest exit first; capacity and relay diversity only separate equal latencies.
+      const exitA = getExitData(stateA, context.probe)!;
+      const exitB = getExitData(stateB, context.probe)!;
+      if (exitA.rtt !== exitB.rtt) return exitA.rtt - exitB.rtt;
+      const scoreA = score(stateA, exitA, context);
+      const scoreB = score(stateB, exitB, context);
       if (scoreA !== scoreB) return scoreB - scoreA;
     } else if (tierA === 1) {
       const pathsA = pathStats(stateA);

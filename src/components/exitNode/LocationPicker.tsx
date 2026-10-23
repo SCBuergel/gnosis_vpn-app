@@ -299,7 +299,7 @@ export default function LocationPicker(props: {
               value={query()}
               onInput={(e) => setQuery(e.currentTarget.value)}
               onKeyDown={onSearchKeyDown}
-              class="h-7 w-full rounded-md border border-border bg-bg-primary pl-6 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-transparent focus:outline-2 focus:outline-accent"
+              class="h-7 w-full rounded-md border border-border bg-bg-primary pl-6 pr-2 text-xs text-text-primary placeholder:text-text-muted focus:border-transparent focus:outline-2 focus:outline-focus"
             />
           </div>
           <Tooltip
@@ -322,7 +322,7 @@ export default function LocationPicker(props: {
                   <button
                     type="button"
                     aria-pressed={settings.exitNodeSortOrder === order}
-                    class="rounded px-1.5 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-accent"
+                    class="rounded px-1.5 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-focus"
                     classList={{
                       "bg-accent text-accent-text":
                         settings.exitNodeSortOrder === order,

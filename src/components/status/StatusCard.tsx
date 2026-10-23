@@ -312,7 +312,7 @@ export default function StatusCard(
             tabIndex={0}
             aria-expanded={expanded()}
             aria-label={`${row().prefix} ${row().text}. Toggle details`}
-            class="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+            class="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
             onClick={toggle}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.repeat) toggle();

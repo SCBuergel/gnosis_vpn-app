@@ -377,8 +377,7 @@ describe("sortByRouteQuality — measured exits", () => {
     ).toEqual(["near", "far"]);
   });
 
-  it("lets free capacity outweigh a small latency edge", () => {
-    // 100 ms one-way is 0.05 of the latency term; 5 of 8 free slots is 0.19 of the capacity term
+  it("puts the faster exit first even when the slower one has more room", () => {
     expect(
       sortByRouteQuality({
         crowded: makeMeasured("crowded", {
@@ -392,7 +391,7 @@ describe("sortByRouteQuality — measured exits", () => {
           300,
         ),
       }, NO_CONTEXT),
-    ).toEqual(["roomy", "crowded"]);
+    ).toEqual(["crowded", "roomy"]);
   });
 
   it("lets relay diversity break a tie between otherwise equal exits", () => {
@@ -404,13 +403,13 @@ describe("sortByRouteQuality — measured exits", () => {
     ).toEqual(["diverse", "single"]);
   });
 
-  it("saturates latency at one second one-way and diversity at four relays", () => {
+  it("orders by latency even far beyond the score's one second ceiling", () => {
     expect(
       sortByRouteQuality({
         "a-glacial": makeMeasured("a-glacial", OPEN_SLOTS, 6_000, 4),
         "b-slow": makeMeasured("b-slow", OPEN_SLOTS, 2_000, 9),
       }, NO_CONTEXT),
-    ).toEqual(["a-glacial", "b-slow"]);
+    ).toEqual(["b-slow", "a-glacial"]);
   });
 
   it("drops a full exit into the ineligible tail, above weak routes", () => {

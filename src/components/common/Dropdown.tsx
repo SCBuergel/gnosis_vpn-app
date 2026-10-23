@@ -186,6 +186,12 @@ export function Dropdown<T>(props: DropdownProps<T>) {
     <>
       <div
         ref={root}
+        // The compact control is one target: a press anywhere on it opens the list.
+        onClick={(e) => {
+          if (props.size !== "compact" || props.disabled) return;
+          if (btn && e.target instanceof Node && btn.contains(e.target)) return;
+          setOpen(!open());
+        }}
         class={`relative text-left ${
           props.size === "sm"
             ? "bg-accent text-accent-text hover:bg-accent-hover pr-0 pl-4 py-2 rounded-full min-w-48 hover:cursor-pointer"
@@ -221,14 +227,13 @@ export function Dropdown<T>(props: DropdownProps<T>) {
           disabled={props.disabled}
           aria-haspopup="listbox"
           aria-expanded={open()}
-          class={`inline-flex items-center justify-center rounded-2xl px-4 py-2
-               text-accent-text disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-accent
+          class={`inline-flex items-center justify-center disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-focus
                transition-transform duration-150 ease-out select-none ${
             props.size === "sm"
-              ? "bg-transparent h-6 w-10 hover:bg-transparent hover:cursor-pointer"
+              ? "rounded-2xl px-4 py-2 text-accent-text bg-transparent h-6 w-10 hover:bg-transparent hover:cursor-pointer"
               : props.size === "compact"
-              ? "h-6 w-7 bg-transparent px-0 text-text-secondary hover:bg-transparent"
-              : "bg-accent h-10 w-16 hover:bg-accent-hover hover:cursor-pointer"
+              ? "h-7 w-7 rounded-md text-text-secondary"
+              : "rounded-2xl px-4 py-2 text-accent-text bg-accent h-10 w-16 hover:bg-accent-hover hover:cursor-pointer"
           }`}
           classList={{ "btn-press": pressed() }}
           onPointerDown={() => playPressAnimation()}

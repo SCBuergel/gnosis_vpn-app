@@ -121,7 +121,7 @@ export default function DestinationHero(props: {
             <button
               ref={(el) => (changeButtonRef = el)}
               type="button"
-              class="inline-flex h-[30px] items-center gap-1.5 rounded-lg border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              class="inline-flex h-[30px] items-center gap-1.5 rounded-lg border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
               aria-haspopup="dialog"
               aria-expanded={appState.mode.listOpen}
               onClick={openList}

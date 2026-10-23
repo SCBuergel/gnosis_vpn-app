@@ -85,6 +85,9 @@ textarea {
   /* Border colors */
   --color-border: #e5e7eb;
 
+  /* Keyboard focus ring: blue so it reads on the navy accent and the light surfaces alike */
+  --color-focus: #2563eb;
+
   /* Accent color - used for buttons, icon buttons, popups, and dropdown highlights */
   --color-accent: #1b2534;
   --color-accent-text: #ffffff;
@@ -134,6 +137,9 @@ textarea {
 
   /* Border colors */
   --color-border: #374151;
+
+  /* Keyboard focus ring */
+  --color-focus: #8ab4ff;
 
   /* Accent color */
   --color-accent: #4335df;
@@ -254,6 +260,7 @@ textarea {
 
   --color-border: var(--color-border);
 
+  --color-focus: var(--color-focus);
   --color-accent: var(--color-accent);
   --color-accent-text: var(--color-accent-text);
   --color-accent-hover: var(--color-accent-hover);

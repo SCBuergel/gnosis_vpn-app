@@ -157,15 +157,16 @@ come from the daemon's count of clients on the exit, so our own session is
 discounted the same way as before; `min(freeSlots, total)` keeps the share in
 [0, 1] when we hold the last slot.
 
-**`sortByRouteQuality` ranks measured exits by score, then the unmeasured by
-resilience, then the rest by closeness to eligible.** The location list's "Best"
-order (`sortForPicker`) is different: every pickable destination (ready or weak)
-by latency, the unmeasured pickable ones next in this order, the unusable last.
-It is frozen when the list opens and re-sorted only as a destination's first
-latency arrives. Auto still picks from `sortByRouteQuality`.
+**`sortByRouteQuality` ranks measured exits by latency (the blended score only
+separating equal latencies), then the unmeasured by resilience, then the rest by
+closeness to eligible.** The location list's "Best" order (`sortForPicker`) is
+different: every pickable destination (ready or weak) by latency, the unmeasured
+pickable ones next in this order, the unusable last. It is frozen when the list
+opens and re-sorted only as a destination's first latency arrives. Auto still
+picks from `sortByRouteQuality`.
 
 ```
-eligible with exit data, ordered by  score desc, label
+eligible with exit data, ordered by  rtt asc, score desc, label
 eligible without exit data,          distinct_first_relays desc, count desc, label
 the rest,                            best_value desc (no Paths walk = 0, unknown = -1,
                                      Unrecoverable = -2), label
