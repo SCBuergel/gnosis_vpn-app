@@ -17,7 +17,11 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ label: "main" }),
 }));
 
-import { AppScreen, createScreenSelector } from "./screenSelector.ts";
+import {
+  AppScreen,
+  createScreenSelector,
+  detectSyncPhase,
+} from "./screenSelector.ts";
 import {
   checkedQuickProbe,
   eligibleRouteHealth,
@@ -97,6 +101,8 @@ describe("createScreenSelector", () => {
   let screenOf: (s: StatusResponse) => AppScreen;
 
   beforeEach(() => {
+    // The fresh-node path logs through the backend; the log call must resolve like the real one.
+    invokeMock.mockResolvedValue(undefined);
     const select = createScreenSelector();
     screenOf = (s) => select(s)[0];
   });
@@ -111,6 +117,16 @@ describe("createScreenSelector", () => {
 
   it("delays main while the only destination has no route yet", () => {
     expect(screenOf(status(RUNNING, [destination(noPathRouteHealth())]))).toBe(
+      AppScreen.Synchronization,
+    );
+  });
+
+  it("moves on for a node without channels, which finds no route before its first connect", () => {
+    const select = createScreenSelector();
+    const noRoute = status(RUNNING, [destination(noPathRouteHealth())]);
+    expect(select(noRoute, true)[0]).toBe(AppScreen.Main);
+    // The gate is per status: a later poll still asks.
+    expect(createScreenSelector()(noRoute, false)[0]).toBe(
       AppScreen.Synchronization,
     );
   });
@@ -220,5 +236,26 @@ describe("createScreenSelector", () => {
     expect(screenOf(status(WARMUP))).toBe(AppScreen.Main);
     const nextRun = createScreenSelector();
     expect(nextRun(status(WARMUP))[0]).toBe(AppScreen.Synchronization);
+  });
+});
+
+describe("detectSyncPhase", () => {
+  it("maps each startup state to its step", () => {
+    expect(detectSyncPhase(status(DEPLOYING_SAFE))).toBe(0);
+    expect(detectSyncPhase(status(WARMUP))).toBe(1);
+    expect(detectSyncPhase(status(RUNNING, [destination(noPathRouteHealth())])))
+      .toBe(2);
+  });
+
+  it("keeps a retried safe deployment on the first step", () => {
+    expect(detectSyncPhase(status(failedSafeDeployment(true)))).toBe(0);
+    expect(detectSyncPhase(status(PREPARING_SAFE))).toBe(0);
+  });
+
+  it("has no step once a destination is ready", () => {
+    expect(
+      detectSyncPhase(status(RUNNING, [destination(eligibleRouteHealth())])),
+    )
+      .toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import type {
   StatusResponse,
 } from "@src/services/vpnService.ts";
 import type { AppState } from "@src/stores/appStore.ts";
+import { BASE_APP_STATE } from "@src/testing/appState.ts";
 import {
   channelMaintenanceWarning,
   connectButtonLook,
@@ -67,45 +68,6 @@ const DESTINATION: Destination = {
   meta: { location: "Brazil" },
   address: "0xexit",
   routing: 1,
-};
-
-const BASE_APP_STATE: AppState = {
-  currentScreen: "initialization" as AppState["currentScreen"],
-  serviceInfo: null,
-  availableDestinations: [],
-  destinations: {},
-  connected: null,
-  connecting: null,
-  reconnecting: null,
-  disconnecting: [],
-  probe: null,
-  isLoading: false,
-  runMode: null,
-  vpnStatus: "ServiceUnavailable",
-  warmupStatus: "",
-  syncProgress: 0,
-  syncPhase: null,
-  measuring: false,
-  syncRecoveryReason: null,
-  isUpdateAvailable: false,
-  availableVersion: null,
-  endOfLife: null,
-  targetDestination: null,
-  balance: null,
-  packageVersion: null,
-  toolkit: { status: "unknown", version: null, packageVersion: null },
-  mode: {
-    entries: {},
-    sequence: [],
-    active: null,
-    mode: { mode: "auto", pending: null },
-    listOpen: false,
-    dragging: false,
-    nextKey: 0,
-    preferredLocation: null,
-    lastConnectedDestination: null,
-    connectOnStartup: false,
-  },
 };
 
 const BALANCE_RECOMMENDATION: BalanceRecommendation = {

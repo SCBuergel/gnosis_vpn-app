@@ -39,9 +39,11 @@ import {
   type ModeAppState,
 } from "@src/stores/destinationMode.ts";
 import {
+  FIRST_PASS_ATTEMPTS,
   IDLE_SCHEDULE,
   nextQuickProbe,
   quickProbeAnswered,
+  timedOutProbe,
   wantsFirstPass,
 } from "@src/stores/quickProbeScheduler.ts";
 import {
@@ -314,8 +316,10 @@ export function createAppStore(): AppStoreTuple {
   // destinationMode.ts snapshots settings once at creation, so wait for real hydrated values.
   let destinationMode: DestinationModeHandle | undefined;
   // A status can arrive before hydration; replay it once the handle exists.
-  // Exits the daemon refused on the first pass; without this a refusal would be re-asked every poll.
+  // Exits the first pass stops waiting for: refused by the daemon, or probed twice without a result.
+  // Without this a refusal would be re-asked every poll and `measuring` would hold auto's countdown forever.
   const firstPassRefused = new Set<string>();
+  const firstPassTimeouts = new Map<string, number>();
   let pendingModeAppState: ModeAppState | undefined;
 
   // Creates once, then only mirrors — must never call applyStatusUpdate here, or this effect (which reads destinationMode.model) retriggers itself forever.
@@ -498,6 +502,12 @@ export function createAppStore(): AppStoreTuple {
     const firstPass = !listOpen &&
       wantsFirstPass(status, activeId, firstPassRefused);
     if (!listOpen && !firstPass) return;
+    const lost = timedOutProbe(quickProbes, now);
+    if (lost !== null) {
+      const attempts = (firstPassTimeouts.get(lost) ?? 0) + 1;
+      firstPassTimeouts.set(lost, attempts);
+      if (attempts >= FIRST_PASS_ATTEMPTS) firstPassRefused.add(lost);
+    }
     const next = nextQuickProbe(quickProbes, status, activeId, now, {
       unmeasuredOnly: firstPass,
       exclude: firstPass ? firstPassRefused : undefined,

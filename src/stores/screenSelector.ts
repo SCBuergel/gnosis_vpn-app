@@ -61,6 +61,8 @@ export function detectSyncPhase(
   response: StatusResponse,
 ): SyncPhaseIndex | null {
   const { run_mode } = response;
+  // A failed deployment the daemon retries is still the Safe step; onboarding never shows this screen.
+  if (isPreparingSafeRunMode(run_mode)) return 0;
   if (isDeployingSafeRunMode(run_mode)) return 0;
   if (isWarmupRunMode(run_mode)) return 1;
   if (findDelayReason(response)) return 2;

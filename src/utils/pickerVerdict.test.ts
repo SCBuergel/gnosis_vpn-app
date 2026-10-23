@@ -60,6 +60,20 @@ describe("pickerVerdict", () => {
     });
   });
 
+  it("offers the first connection where a fresh node sees no route", () => {
+    const none = { kind: "none" } as const;
+    expect(pickerVerdict(none, noPathRouteHealth(), null, true)).toEqual({
+      headline: "Ready for first connection",
+      context:
+        "Your first connection sets up payment channels. It takes about a minute.",
+    });
+    // Only a missing route is a first-connect target; a full exit stays full.
+    expect(pickerVerdict(none, READY, measured(0), true).headline).toBe("Full");
+    expect(
+      pickerVerdict(none, unrecoverableRouteHealth(), null, true).headline,
+    ).not.toBe("Ready for first connection");
+  });
+
   it("states the route health's own verdict for none", () => {
     const none = { kind: "none" } as const;
     expect(pickerVerdict(none, READY, measured(0))).toEqual({

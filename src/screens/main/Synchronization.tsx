@@ -44,7 +44,7 @@ const trivia = [
 const CYCLE_MS = 9000;
 const FADE_MS = 400;
 
-/** Startup: which step the node is on, with the daemon's status under it; no invented percentages. */
+/** Startup: which step the node is on, with the daemon's status under it. The bar only paces the wait. */
 export default function Synchronization(props: SynchronizationProps) {
   const [index, setIndex] = createSignal(0);
   const [visible, setVisible] = createSignal(true);
@@ -136,11 +136,7 @@ export default function Synchronization(props: SynchronizationProps) {
 
       <div
         class="mt-6 h-1 w-full overflow-hidden rounded-full bg-border"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progress())}
-        aria-label="Startup progress"
+        aria-hidden="true"
       >
         <div
           class="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"

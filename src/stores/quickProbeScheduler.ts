@@ -12,6 +12,21 @@ export interface QuickProbeSchedule {
 
 export const IDLE_SCHEDULE: QuickProbeSchedule = { inFlight: null };
 
+/** How often the first pass asks about one exit before it stops waiting for it. */
+export const FIRST_PASS_ATTEMPTS = 2;
+
+/** The in-flight probe the clock has abandoned, if any; null while it may still land. */
+export function timedOutProbe(
+  schedule: QuickProbeSchedule,
+  now: number,
+): string | null {
+  const inFlight = schedule.inFlight;
+  if (!inFlight || now - inFlight.issuedAt < QUICK_PROBE_TIMEOUT_MS) {
+    return null;
+  }
+  return inFlight.id;
+}
+
 export interface QuickProbeScope {
   /** The first pass: only exits nothing has measured yet, never a refresh. */
   unmeasuredOnly?: boolean;

@@ -10,6 +10,7 @@ import {
   QUICK_PROBE_FRESH_MS,
   QUICK_PROBE_TIMEOUT_MS,
   quickProbeAnswered,
+  timedOutProbe,
   wantsFirstPass,
 } from "./quickProbeScheduler.ts";
 import {
@@ -185,6 +186,16 @@ describe("quickProbeAnswered — the daemon's immediate reply", () => {
     const schedule = { inFlight: { id: "b", issuedAt: 5 } };
 
     expect(quickProbeAnswered(schedule, "a", false)).toEqual(schedule);
+  });
+});
+
+describe("timedOutProbe", () => {
+  it("names the probe only once the clock has given it up", () => {
+    const schedule = { inFlight: { id: "a", issuedAt: 1_000 } };
+    expect(timedOutProbe(IDLE_SCHEDULE, 1_000_000)).toBeNull();
+    expect(timedOutProbe(schedule, 1_000 + QUICK_PROBE_TIMEOUT_MS - 1))
+      .toBeNull();
+    expect(timedOutProbe(schedule, 1_000 + QUICK_PROBE_TIMEOUT_MS)).toBe("a");
   });
 });
 

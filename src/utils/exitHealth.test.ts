@@ -1,7 +1,7 @@
-import { formatDuration } from "./exitHealth.ts";
 import { describe, expect, it } from "vitest";
 import {
   formatConnectionStatus,
+  formatDuration,
   formatExitHealthStatus,
   getConnectionQuality,
   getExitHealthColor,
