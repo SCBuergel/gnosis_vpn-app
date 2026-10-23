@@ -11,6 +11,7 @@ import {
 import { isSwitchingDestination } from "@src/utils/status.ts";
 import Flag from "../Flag.tsx";
 import GlobeIcon from "../icons/GlobeIcon.tsx";
+import Spinner from "@src/components/common/Spinner.tsx";
 import Tooltip from "../common/Tooltip.tsx";
 import LocationPicker, { type PickerFrame } from "./LocationPicker.tsx";
 import SwitchSpinner from "./SwitchSpinner.tsx";
@@ -98,6 +99,9 @@ export default function DestinationHero(props: {
               <Show when={auto()}>
                 <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                   {appState.measuring ? "Checking locations…" : "Best location"}
+                  <Show when={appState.measuring}>
+                    <Spinner class="size-3" />
+                  </Show>
                   <Show when={pending()?.countdownEndsAt} keyed>
                     {(endsAt) => (
                       <Tooltip content={`Switching to ${candidateTitle()}`}>
