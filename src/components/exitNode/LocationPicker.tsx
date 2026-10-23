@@ -322,7 +322,7 @@ export default function LocationPicker(props: {
                   <button
                     type="button"
                     aria-pressed={settings.exitNodeSortOrder === order}
-                    class="rounded px-1.5 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-focus"
+                    class="rounded px-1.5 py-0.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
                     classList={{
                       "bg-accent text-accent-text":
                         settings.exitNodeSortOrder === order,

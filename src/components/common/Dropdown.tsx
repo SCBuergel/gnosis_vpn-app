@@ -58,14 +58,19 @@ export function Dropdown<T>(props: DropdownProps<T>) {
   let listContainer!: HTMLDivElement;
 
   const [listPos, setListPos] = createSignal({ top: 0, left: 0, width: 0 });
+  const COMPACT_LIST_MIN_WIDTH = 220;
   const updatePosition = () => {
     if (!root) return;
     const rect = root.getBoundingClientRect();
-    setListPos({
-      top: Math.round(rect.bottom),
-      left: Math.round(rect.left),
-      width: Math.round(rect.width),
-    });
+    // A compact control is narrow; its list grows leftwards so long names fit on one line.
+    const width = props.size === "compact"
+      ? Math.max(Math.round(rect.width), COMPACT_LIST_MIN_WIDTH)
+      : Math.round(rect.width);
+    const left = Math.max(
+      8,
+      Math.round(props.size === "compact" ? rect.right - width : rect.left),
+    );
+    setListPos({ top: Math.round(rect.bottom + 4), left, width });
   };
 
   const selectedIdx = createMemo(() =>
@@ -227,7 +232,7 @@ export function Dropdown<T>(props: DropdownProps<T>) {
           disabled={props.disabled}
           aria-haspopup="listbox"
           aria-expanded={open()}
-          class={`inline-flex items-center justify-center disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-focus
+          class={`inline-flex items-center justify-center disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus
                transition-transform duration-150 ease-out select-none ${
             props.size === "sm"
               ? "rounded-2xl px-4 py-2 text-accent-text bg-transparent h-6 w-10 hover:bg-transparent hover:cursor-pointer"

@@ -19,7 +19,7 @@ export interface ButtonProps {
 
 // Default arrow cursor on buttons, as native desktop toolkits do; the focus ring only shows for keyboard focus.
 const baseClasses =
-  "font-bold inline-flex items-center justify-center focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 gap-2 transition-transform duration-150 ease-out select-none";
+  "font-bold inline-flex items-center justify-center focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50 gap-2 transition-transform duration-150 ease-out select-none";
 
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:

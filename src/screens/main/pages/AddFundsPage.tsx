@@ -261,14 +261,14 @@ export default function AddFundsPage() {
             <div class="flex flex-wrap gap-2">
               <button
                 type="button"
-                class="h-8 rounded-md border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-focus"
+                class="h-8 rounded-md border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
                 onClick={() => void copyAddress()}
               >
                 {copied() ? FUNDING_COPY.copied : FUNDING_COPY.copy}
               </button>
               <button
                 type="button"
-                class="h-8 rounded-md border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-focus"
+                class="h-8 rounded-md border border-border bg-bg-surface px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-focus"
                 onClick={() => void openFundingTool()}
               >
                 {FUNDING_COPY.fundingTool} <span aria-hidden="true">↗</span>

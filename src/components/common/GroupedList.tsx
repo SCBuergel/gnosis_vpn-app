@@ -60,7 +60,7 @@ export function Row(props: {
       <button
         type="button"
         aria-label={props.ariaLabel}
-        class="flex min-h-10 w-full items-center gap-3 px-3 py-1.5 text-left transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+        class="flex min-h-10 w-full items-center gap-3 px-3 py-1.5 text-left transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-focus"
         onClick={() => props.onClick?.()}
       >
         {content}

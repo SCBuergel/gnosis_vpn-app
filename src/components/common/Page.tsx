@@ -34,7 +34,7 @@ export default function Page(props: {
         <button
           type="button"
           aria-label="Back"
-          class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-surface text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+          class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-bg-surface text-text-primary transition-colors hover:bg-darken focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-focus"
           onClick={() => props.onBack()}
         >
           <svg
