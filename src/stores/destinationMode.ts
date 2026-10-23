@@ -89,6 +89,8 @@ export interface ModeAppState {
   connecting: ConnectingInfo | null;
   reconnecting: ReconnectingInfo | null;
   probe: ProbeView | null;
+  /** The first pass is still measuring never-probed exits: the ranking is about to change. */
+  measuring?: boolean;
 }
 
 export interface DestinationModeSettings {
@@ -327,7 +329,8 @@ export function createDestinationMode(
     const worthSwitchingTo = candidate !== null &&
       candidate !== draft.active &&
       isReady(status.destinations[candidate], rankContext(status));
-    if (!worthSwitchingTo) {
+    // Every measurement may reorder the list; one switch after the pass beats one per answer.
+    if (!worthSwitchingTo || status.measuring) {
       draft.mode = AUTO_IDLE;
       return;
     }

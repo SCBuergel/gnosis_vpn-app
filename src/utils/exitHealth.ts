@@ -203,6 +203,19 @@ export function formatSecondsAgo(diffSec: number): string {
   return `${hours} h ago`;
 }
 
+/** A running duration for the connected card, e.g. "48 s", "12 min", "2 h 05 min". */
+export function formatDuration(diffSec: number): string {
+  const total = Math.max(0, Math.floor(diffSec));
+  if (total < 60) return `${total} s`;
+  const minutes = Math.floor(total / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0
+    ? `${hours} h`
+    : `${hours} h ${String(rest).padStart(2, "0")} min`;
+}
+
 /** Whether the card has route stats to show: anything the walk found. */
 export function hasHealthContent(rhv: RouteHealthView | null): boolean {
   return rhv?.walk?.found === "Paths";

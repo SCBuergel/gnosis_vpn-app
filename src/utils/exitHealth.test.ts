@@ -1,3 +1,4 @@
+import { formatDuration } from "./exitHealth.ts";
 import { describe, expect, it } from "vitest";
 import {
   formatConnectionStatus,
@@ -213,5 +214,20 @@ describe("formatConnectionStatus", () => {
   it("treats disconnecting as already disconnected", () => {
     expect(formatConnectionStatus("Disconnecting")).toBe("Disconnected");
     expect(formatConnectionStatus("None")).toBe("Disconnected");
+  });
+});
+
+describe("formatDuration", () => {
+  it("counts seconds, then whole minutes, then hours with padded minutes", () => {
+    expect(formatDuration(0)).toBe("0 s");
+    expect(formatDuration(48.9)).toBe("48 s");
+    expect(formatDuration(60)).toBe("1 min");
+    expect(formatDuration(12 * 60 + 59)).toBe("12 min");
+    expect(formatDuration(3600)).toBe("1 h");
+    expect(formatDuration(2 * 3600 + 5 * 60)).toBe("2 h 05 min");
+  });
+
+  it("never goes negative when the clock is behind the daemon's", () => {
+    expect(formatDuration(-3)).toBe("0 s");
   });
 });

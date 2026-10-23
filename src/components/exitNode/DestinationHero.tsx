@@ -97,7 +97,7 @@ export default function DestinationHero(props: {
             <div class="flex flex-col items-center">
               <Show when={auto()}>
                 <span class="flex items-center gap-1.5 text-xs text-text-secondary">
-                  Best location
+                  {appState.measuring ? "Checking locations…" : "Best location"}
                   <Show when={pending()?.countdownEndsAt} keyed>
                     {(endsAt) => (
                       <Tooltip content={`Switching to ${candidateTitle()}`}>

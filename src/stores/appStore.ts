@@ -42,6 +42,7 @@ import {
   IDLE_SCHEDULE,
   nextQuickProbe,
   quickProbeAnswered,
+  wantsFirstPass,
 } from "@src/stores/quickProbeScheduler.ts";
 import {
   logError,
@@ -101,6 +102,8 @@ export interface AppState {
   syncProgress: number;
   // Which startup step the daemon is in while the sync screen shows.
   syncPhase: SyncPhaseIndex | null;
+  /** The first pass of quick probes is still running: "best" is provisional. */
+  measuring: boolean;
   syncRecoveryReason: string | null;
   isUpdateAvailable: boolean;
   availableVersion: string | null;
@@ -160,6 +163,7 @@ function initialState(): AppState {
     warmupStatus: "",
     syncProgress: 0,
     syncPhase: null,
+    measuring: false,
     syncRecoveryReason: null,
     isUpdateAvailable: false,
     availableVersion: null,
@@ -310,6 +314,8 @@ export function createAppStore(): AppStoreTuple {
   // destinationMode.ts snapshots settings once at creation, so wait for real hydrated values.
   let destinationMode: DestinationModeHandle | undefined;
   // A status can arrive before hydration; replay it once the handle exists.
+  // Exits the daemon refused on the first pass; without this a refusal would be re-asked every poll.
+  const firstPassRefused = new Set<string>();
   let pendingModeAppState: ModeAppState | undefined;
 
   // Creates once, then only mirrors — must never call applyStatusUpdate here, or this effect (which reads destinationMode.model) retriggers itself forever.
@@ -416,6 +422,19 @@ export function createAppStore(): AppStoreTuple {
     setState("vpnStatus", deriveVPNStatus(response));
     setState("availableDestinations", availableDestinations);
 
+    const measuring = !destinationMode?.model.listOpen &&
+      wantsFirstPass(
+        {
+          availableDestinations,
+          destinations,
+          connected: response.connected,
+          connecting: response.connecting,
+          reconnecting: response.reconnecting,
+          probe: response.probe,
+        },
+        firstPassRefused,
+      );
+    setState("measuring", measuring);
     pendingModeAppState = {
       availableDestinations,
       destinations,
@@ -423,6 +442,7 @@ export function createAppStore(): AppStoreTuple {
       connecting: response.connecting,
       reconnecting: response.reconnecting,
       probe: response.probe,
+      measuring,
     };
     destinationMode?.applyStatusUpdate(pendingModeAppState);
     maybeConnectOnStartup(pendingModeAppState);
@@ -467,12 +487,18 @@ export function createAppStore(): AppStoreTuple {
 
   let quickProbes = IDLE_SCHEDULE;
 
-  /** One quick probe at a time while the list is open; see docs/destinationMode.md, Probing. */
+  /** One quick probe at a time while the list is open, or once over the never-measured exits while idle; see docs/destinationMode.md, Probing. */
   const runQuickProbes = (status: ModeAppState) => {
-    if (!destinationMode?.model.listOpen) return;
+    if (!destinationMode) return;
+    const listOpen = destinationMode.model.listOpen;
+    const firstPass = !listOpen && wantsFirstPass(status, firstPassRefused);
+    if (!listOpen && !firstPass) return;
     const now = Date.now();
     const activeId = effectiveActive(destinationMode.model, now);
-    const next = nextQuickProbe(quickProbes, status, activeId, now);
+    const next = nextQuickProbe(quickProbes, status, activeId, now, {
+      unmeasuredOnly: firstPass,
+      exclude: firstPass ? firstPassRefused : undefined,
+    });
     quickProbes = next.schedule;
     if (next.issue === null) return;
     const id = next.issue;
@@ -480,10 +506,14 @@ export function createAppStore(): AppStoreTuple {
       .then((response) => {
         const accepted = response.type === "Checking";
         quickProbes = quickProbeAnswered(quickProbes, id, accepted);
-        if (!accepted) logInfo(`Quick probe ${id}: ${response.type}`);
+        if (!accepted) {
+          if (firstPass) firstPassRefused.add(id);
+          logInfo(`Quick probe ${id}: ${response.type}`);
+        }
       })
       .catch((error) => {
         quickProbes = quickProbeAnswered(quickProbes, id, false);
+        if (firstPass) firstPassRefused.add(id);
         logWarn(`Quick probe ${id} failed: ${error}`);
       });
   };

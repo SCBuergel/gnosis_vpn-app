@@ -12,18 +12,52 @@ export interface QuickProbeSchedule {
 
 export const IDLE_SCHEDULE: QuickProbeSchedule = { inFlight: null };
 
-/** Runs on every status update while the list is open; `issue` is the quick probe to send, if any. */
+export interface QuickProbeScope {
+  /** The first pass: only exits nothing has measured yet, never a refresh. */
+  unmeasuredOnly?: boolean;
+  /** Exits the daemon refused this session; asking again would loop. */
+  exclude?: ReadonlySet<string>;
+}
+
+/**
+ * Until the list is first opened, "Best location" rests on the daemon's walk
+ * alone. While nothing is connected or connecting and some routable exit has
+ * never been measured, one idle pass fills that in; the list then refreshes.
+ */
+export function wantsFirstPass(
+  status: ModeAppState,
+  exclude: ReadonlySet<string> = new Set(),
+): boolean {
+  if (
+    status.connected !== null || status.connecting !== null ||
+    status.reconnecting !== null
+  ) return false;
+
+  return Object.values(status.destinations).some((d) =>
+    d.route_health?.state.state === "Routable" &&
+    d.route_health.quick_probe === null &&
+    !exclude.has(d.destination.id)
+  );
+}
+
+/** Runs on every status update while the list is open or the first pass is due; `issue` is the quick probe to send, if any. */
 export function nextQuickProbe(
   schedule: QuickProbeSchedule,
   status: ModeAppState,
   activeId: string | null,
   now: number,
+  scope: QuickProbeScope = {},
 ): { schedule: QuickProbeSchedule; issue: string | null } {
   if (schedule.inFlight && !isDone(schedule.inFlight, status, now)) {
     return { schedule, issue: null };
   }
   const next = sortByRouteQuality(status.destinations, rankContext(status))
-    .find((id) => id !== activeId && isCandidate(status, id, now));
+    .find((id) =>
+      id !== activeId && !scope.exclude?.has(id) &&
+      isCandidate(status, id, now) &&
+      (!scope.unmeasuredOnly ||
+        status.destinations[id]?.route_health?.quick_probe === null)
+    );
   if (next === undefined) return { schedule: IDLE_SCHEDULE, issue: null };
   return { schedule: { inFlight: { id: next, issuedAt: now } }, issue: next };
 }

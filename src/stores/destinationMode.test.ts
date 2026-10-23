@@ -597,6 +597,25 @@ describe("auto — arming", () => {
     expect(handle.model.entries["usa"]).toMatchObject({ wasActive: false });
   });
 
+  it("holds the countdown while the first pass is still measuring", () => {
+    const handle = setup();
+    step(handle, statusFor({ uk: makeEligible("uk", 50) }));
+
+    const better = {
+      uk: makeEligible("uk", 50),
+      usa: makeEligible("usa", 90),
+    };
+    step(handle, { ...statusFor(better), measuring: true });
+    expect(handle.model.mode).toEqual({ mode: "auto", pending: null });
+    expect(handle.model.active).toBe("uk");
+
+    step(handle, statusFor(better));
+    expect(handle.model.mode).toMatchObject({
+      mode: "auto",
+      pending: { candidateId: "usa" },
+    });
+  });
+
   it("keeps a candidate that is already history in its slot", () => {
     const handle = setup();
     stripWithHistory(handle);

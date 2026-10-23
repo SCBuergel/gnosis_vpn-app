@@ -1,187 +1,172 @@
+import { createMemo, Match, Switch } from "solid-js";
+import { Section } from "@src/components/common/GroupedList.tsx";
 import {
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  Show,
-} from "solid-js";
-import { useAppStore } from "../../stores/appStore.ts";
-import checkIcon from "@assets/icons/checked-box-filled.svg";
-import iconNumber1 from "@assets/icons/1.svg";
-import iconNumber2 from "@assets/icons/2.svg";
-import loadingIcon from "@assets/icons/loading.svg";
+  AddressCard,
+  exactOrNull,
+  NetworkLine,
+  TokenRow,
+} from "@src/components/funding/FundingPieces.tsx";
+import StatusIndicator from "@src/components/status/StatusIndicator.tsx";
+import { isPreparingSafeRunMode } from "@src/services/vpnService.ts";
+import { useAppStore } from "@src/stores/appStore.ts";
+import { FUNDING_COPY } from "@src/utils/fundingCopy.ts";
+import {
+  formatWxhopr,
+  formatXdai,
+  humanXdai,
+  wxhoprDecimal,
+} from "@src/utils/hopli.ts";
 import {
   getPreparingSafeNodeAddress,
   isWxHOPRTransferred,
   isXDAITransferred,
 } from "@src/utils/status.ts";
-import { isPreparingSafeRunMode } from "../../services/vpnService.ts";
-import {
-  formatXdai,
-  humanWxhoprParts,
-  wxhoprDecimal,
-} from "../../utils/hopli.ts";
-import FundingAddress from "../address/FundingAddress.tsx";
-import StatusIndicator from "../status/StatusIndicator.tsx";
 
-const SHOW_EXACT_WXHOPR_BELOW = 10n ** 15n; // 0.001 wxHOPR
-
+/** First run: the same card and rows as Add funds, with the daemon's recommended amounts and an arrival check per token. */
 export default function Manually() {
   const [appState] = useAppStore();
-  const wxhoprTransferred = () => isWxHOPRTransferred(appState);
-  const xdaiTransferred = () => isXDAITransferred(appState);
+  const wxhoprArrived = () => isWxHOPRTransferred(appState);
+  const xdaiArrived = () => isXDAITransferred(appState);
+  const ready = () => wxhoprArrived() && xdaiArrived();
+  const serviceAvailable = () => appState.vpnStatus !== "ServiceUnavailable";
 
-  const ready = () => wxhoprTransferred() && xdaiTransferred();
+  const address = createMemo(() =>
+    (getPreparingSafeNodeAddress(appState) ?? "").trim()
+  );
+  const preparing = () =>
+    isPreparingSafeRunMode(appState.runMode)
+      ? appState.runMode.PreparingSafe
+      : null;
+  const recommendation = () => preparing()?.balance_recommendation ?? null;
 
-  const [readyDelayed, setReadyDelayed] = createSignal(false);
-  createEffect(() => {
-    if (ready()) {
-      const timeout = setTimeout(() => setReadyDelayed(true), 400);
-      onCleanup(() => clearTimeout(timeout));
-    } else {
-      setReadyDelayed(false);
-    }
-  });
-  const isServiceAvailable = () => appState.vpnStatus !== "ServiceUnavailable";
+  const wxhoprHint = () => {
+    const rec = recommendation();
+    if (wxhoprArrived() || rec === null) return null;
+    const rounded = formatWxhopr(rec.wxhopr, 3, "ceil");
+    return {
+      amount: `${rounded} wxHOPR`,
+      exact: exactOrNull(
+        `${wxhoprDecimal(rec.wxhopr)} wxHOPR`,
+        `${rounded} wxHOPR`,
+      ),
+      after: ONBOARDING_COPY.hintAfter,
+    };
+  };
+  const xdaiHint = () => {
+    const rec = recommendation();
+    if (xdaiArrived() || rec === null) return null;
+    const rounded = formatXdai(rec.xdai, 3, "ceil");
+    return {
+      amount: `${rounded} xDAI`,
+      exact: exactOrNull(`${formatXdai(rec.xdai, 18)} xDAI`, `${rounded} xDAI`),
+      after: ONBOARDING_COPY.hintAfter,
+    };
+  };
 
-  const nodeAddress = createMemo(() => {
-    return getPreparingSafeNodeAddress(appState);
-  });
-
-  const balanceRec = createMemo(() => {
-    if (!isPreparingSafeRunMode(appState.runMode)) return null;
-    return appState.runMode.PreparingSafe.balance_recommendation;
-  });
+  const waitingDetail = () =>
+    wxhoprArrived()
+      ? ONBOARDING_COPY.waitingFor("xDAI")
+      : xdaiArrived()
+      ? ONBOARDING_COPY.waitingFor("wxHOPR")
+      : FUNDING_COPY.idle;
 
   return (
-    <div class="h-full w-full flex flex-col items-stretch p-6 gap-4">
-      <h1 class="w-full text-3xl font-bold text-center mt-6 mb-3 flex flex-row">
-        Fund your VPN
-      </h1>
-      <FundingAddress full address={nodeAddress()} qrVisible selectable />
-      <div
-        class={`flex flex-col gap-4 grow ${
-          !isServiceAvailable() ? "opacity-50 pointer-events-none" : ""
-        }`}
-      >
-        <div class="flex flex-row w-full">
-          <img
-            src={wxhoprTransferred() ? checkIcon : iconNumber1}
-            alt={wxhoprTransferred() ? "Checked" : "1"}
-            class={`h-5 w-5 mr-4 mt-1 dark:invert ${
-              wxhoprTransferred() ? "check-pop" : ""
-            }`}
-          />
-          <div class="flex flex-col">
-            <div class="font-bold">Transfer wxHOPR (Gnosis Chain)</div>
-            <Show
-              when={balanceRec()}
-              fallback={
-                <div class="text-sm text-text-secondary">
-                  The amount you fund determines your privacy budget.
-                </div>
-              }
-            >
-              {(rec) => (
-                <div class="text-sm text-text-secondary">
-                  <div>
-                    Send at least{" "}
-                    <span class="select-text cursor-text">
-                      {humanWxhoprParts(rec().wxhopr, "ceil").amount}
-                    </span>{" "}
-                    wxHOPR
-                  </div>
-                  <div class="min-h-5">
-                    <Show when={rec().wxhopr < SHOW_EXACT_WXHOPR_BELOW}>
-                      (<span class="select-text cursor-text">
-                        {wxhoprDecimal(rec().wxhopr)}
-                      </span>{" "}
-                      wxHOPR)
-                    </Show>
-                  </div>
-                </div>
-              )}
-            </Show>
-          </div>
-        </div>
-
-        <div class="flex flex-row w-full">
-          <img
-            src={xdaiTransferred() ? checkIcon : iconNumber2}
-            alt={xdaiTransferred() ? "Checked" : "2"}
-            class={`h-5 w-5 mr-4 mt-1 dark:invert ${
-              xdaiTransferred() ? "check-pop" : ""
-            }`}
-          />
-          <div class="flex flex-col">
-            <div class="font-bold">Transfer xDAI (Gnosis Chain)</div>
-            <Show
-              when={balanceRec()}
-              fallback={
-                <div class="text-sm text-text-secondary">
-                  Needed for on-chain operations (channel management).
-                </div>
-              }
-            >
-              {(rec) => (
-                <div class="text-sm text-text-secondary">
-                  Send at least{" "}
-                  <span class="select-text cursor-text">
-                    {formatXdai(rec().xdai, 3, "ceil")}
-                  </span>{" "}
-                  xDAI
-                </div>
-              )}
-            </Show>
-          </div>
-        </div>
+    <div class="flex h-full w-full flex-col gap-3 overflow-y-auto px-5 pb-5 pt-6 text-text-primary">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-xl font-bold">{ONBOARDING_COPY.title}</h1>
+        <p class="text-sm text-text-secondary">{ONBOARDING_COPY.intro}</p>
       </div>
 
-      <Show
-        when={isServiceAvailable()}
-        fallback={
-          <div class="flex flex-row w-full justify-center fade-in-up">
+      <AddressCard address={address()} />
+      <NetworkLine />
+
+      <Section title={FUNDING_COPY.whatToSend}>
+        <TokenRow
+          name={FUNDING_COPY.wxhopr.name}
+          purpose={FUNDING_COPY.wxhopr.purpose}
+          balance={formatWxhopr(preparing()?.node_wxhopr ?? 0n, 2)}
+          status={wxhoprArrived()
+            ? ONBOARDING_COPY.received
+            : ONBOARDING_COPY.waiting}
+          hint={wxhoprHint()}
+        />
+        <TokenRow
+          name={FUNDING_COPY.xdai.name}
+          purpose={FUNDING_COPY.xdai.purpose}
+          balance={humanXdai(preparing()?.node_xdai ?? 0n)}
+          status={xdaiArrived()
+            ? ONBOARDING_COPY.received
+            : ONBOARDING_COPY.waiting}
+          hint={xdaiHint()}
+        />
+      </Section>
+
+      <Switch>
+        <Match when={!serviceAvailable()}>
+          <div class="flex w-full justify-center">
             <StatusIndicator size="sm" whenOfflineOnly />
           </div>
-        }
-      >
-        <Show when={!wxhoprTransferred() || !xdaiTransferred()}>
-          <div class="flex flex-row w-full items-center gap-4 fade-in-up h-15 shrink-0">
-            <div class="h-5 w-5 dark:invert">
-              <img src={loadingIcon} alt="Loading" class="h-5 w-5" />
-            </div>
-            <Show when={!xdaiTransferred() && !wxhoprTransferred()}>
-              <div class="flex flex-col text-sm fade-in-up">
-                Waiting for incoming funds…
-              </div>
-            </Show>
-            <Show when={xdaiTransferred() && !wxhoprTransferred()}>
-              <div class="flex flex-col text-sm fade-in-up">
-                xDAI arrived, waiting for wxHOPR
-              </div>
-            </Show>
-            <Show when={!xdaiTransferred() && wxhoprTransferred()}>
-              <div class="flex flex-col text-sm fade-in-up">
-                wxHOPR arrived, waiting for xDAI
-              </div>
-            </Show>
+        </Match>
+        <Match when={ready()}>
+          <div
+            class="flex items-start gap-2.5 rounded-xl border border-vpn-light-green/40 bg-vpn-light-green/10 px-3 py-2.5"
+            role="status"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              class="mt-0.5 size-4 shrink-0 text-text-green"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 8.5l3.2 3.2L13 5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="flex flex-col text-sm">
+              <span class="font-bold text-text-green">
+                {ONBOARDING_COPY.done.title}
+              </span>
+              <span class="text-text-green">{ONBOARDING_COPY.done.detail}</span>
+            </span>
           </div>
-        </Show>
-
-        <Show when={readyDelayed()}>
-          <div class="flex flex-row w-full items-center gap-4 fade-in-up h-15">
-            <img
-              src={checkIcon}
-              alt="Check"
-              class="h-5 w-5 dark:invert check-pop"
+        </Match>
+        <Match when>
+          <div
+            class="flex items-start gap-2.5 rounded-xl border border-border bg-bg-surface px-3 py-2.5"
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              class="mt-0.5 size-4 shrink-0 animate-spin-smooth rounded-full border-2 border-border border-t-text-primary"
+              aria-hidden="true"
             />
-            <div class="text-sm">
-              All necessary funds have been transferred. You'll be forwarded in
-              a moment.
-            </div>
+            <span class="flex flex-col text-sm">
+              <span class="font-bold text-text-primary">
+                {FUNDING_COPY.waiting.title}
+              </span>
+              <span class="text-text-secondary">{waitingDetail()}</span>
+            </span>
           </div>
-        </Show>
-      </Show>
+        </Match>
+      </Switch>
     </div>
   );
 }
+
+/** First-run wording; the shared lines live in FUNDING_COPY. */
+const ONBOARDING_COPY = {
+  title: "Fund your VPN",
+  intro: "Send both tokens to this address once; the app carries on by itself.",
+  hintAfter: " to get started",
+  received: "Received",
+  waiting: "Waiting",
+  waitingFor: (token: string) => `One down. Waiting for the ${token} now.`,
+  done: {
+    title: "Both arrived",
+    detail: "Setting up your node. This takes a minute or two.",
+  },
+} as const;

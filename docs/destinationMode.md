@@ -173,8 +173,10 @@ the rest,                            best_value desc (no Paths walk = 0, unknown
 ```
 
 A measured exit always outranks an unmeasured one: a good score is knowledge,
-the walk alone is a promise. Opening the list measures the unmeasured ones, so
-the promise is short-lived. The score weights latency half, free capacity a
+the walk alone is a promise. While nothing is connected or connecting, an idle
+sweep measures each never-measured routable exit once (`wantsFirstPass`), so the
+hero's "Best location" is backed by a number soon after launch; opening the list
+measures and refreshes the rest. The score weights latency half, free capacity a
 third, and relay diversity a fifth; a 1 s one-way latency or worse scores zero
 on latency, and four or more distinct first relays score full on diversity.
 
@@ -525,6 +527,13 @@ nothing has measured yet has no exit data.
 the status poll at `STATUS_POLL_FAST_MS` and start the loop; on `listClosed`,
 lift the cap and stop issuing. A quick probe in flight when the list closes
 finishes on its own and its result is kept.
+
+**The first pass runs the same loop with `unmeasuredOnly`.** With the list
+closed and no session up, the loop issues only for exits whose `quick_probe` is
+`null`, at the normal poll rate, and stops when none is left. An exit the daemon
+refuses is remembered for the session and not asked again. While the pass runs,
+`ModeAppState.measuring` holds auto's countdown (no switch per answer; one after
+the pass) and the hero says "Checking locations…" instead of "Best location".
 
 The loop is a pure scheduler over `statusUpdate`:
 

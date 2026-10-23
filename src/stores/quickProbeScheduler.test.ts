@@ -10,6 +10,7 @@ import {
   QUICK_PROBE_FRESH_MS,
   QUICK_PROBE_TIMEOUT_MS,
   quickProbeAnswered,
+  wantsFirstPass,
 } from "./quickProbeScheduler.ts";
 import {
   checkedQuickProbe,
@@ -184,5 +185,51 @@ describe("quickProbeAnswered — the daemon's immediate reply", () => {
     const schedule = { inFlight: { id: "b", issuedAt: 5 } };
 
     expect(quickProbeAnswered(schedule, "a", false)).toEqual(schedule);
+  });
+});
+
+describe("first pass", () => {
+  const checked = checkedQuickProbe(SLOTS, 100, 0);
+
+  it("is wanted while idle and some routable exit was never measured", () => {
+    expect(
+      wantsFirstPass(statusFor({ a: dest("a", 3), b: dest("b", 3, checked) })),
+    )
+      .toBe(true);
+    expect(wantsFirstPass(statusFor({ b: dest("b", 3, checked) }))).toBe(false);
+  });
+
+  it("is not wanted during a session, nor for exits the daemon refused", () => {
+    const status = statusFor({ a: dest("a", 3) });
+    expect(
+      wantsFirstPass({
+        ...status,
+        connecting: { destination_id: "a" } as never,
+      }),
+    )
+      .toBe(false);
+    expect(wantsFirstPass(status, new Set(["a"]))).toBe(false);
+  });
+
+  it("unmeasuredOnly skips stale exits that the open list would refresh", () => {
+    const stale = checkedQuickProbe(SLOTS, 100, 0);
+    const now = QUICK_PROBE_FRESH_MS * 5;
+    const status = statusFor({
+      stale: dest("stale", 9, stale),
+      fresh: dest("fresh", 1),
+    });
+    expect(nextQuickProbe(IDLE_SCHEDULE, status, null, now).issue).toBe(
+      "stale",
+    );
+    expect(
+      nextQuickProbe(IDLE_SCHEDULE, status, null, now, { unmeasuredOnly: true })
+        .issue,
+    ).toBe("fresh");
+    expect(
+      nextQuickProbe(IDLE_SCHEDULE, status, null, now, {
+        unmeasuredOnly: true,
+        exclude: new Set(["fresh"]),
+      }).issue,
+    ).toBe(null);
   });
 });

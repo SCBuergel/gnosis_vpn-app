@@ -19,6 +19,7 @@ import {
 } from "@src/utils/firstConnect.ts";
 import {
   type ConnectionQuality,
+  formatDuration,
   formatExitHealthStatus,
   formatLatency,
   formatPathValue,
@@ -80,6 +81,7 @@ const LATENCY_TOOLTIP = (
   </div>
 );
 const CHECKED_TOOLTIP = "Time since last health check";
+const CONNECTED_FOR_TOOLTIP = "How long this session has been up";
 const PATH_TOOLTIP =
   "Value of the best path found; below 90% counts as a weak route.";
 const RELAYS_TOOLTIP =
@@ -214,6 +216,11 @@ export default function StatusCard(
     const epoch = getLastCheckedEpoch(rh, exit());
     if (epoch === null) return null;
     return formatSecondsAgo(Math.max(0, Math.round(nowSec() - epoch)));
+  };
+  const connectedFor = (): string | null => {
+    const since = isConnected() ? appState.connected?.since : undefined;
+    if (since === undefined) return null;
+    return formatDuration(nowSec() - since / 1000);
   };
   const pathValue = () => {
     const rh = routeHealth();
@@ -385,6 +392,13 @@ export default function StatusCard(
                 <h2 class="mb-0.5 text-[11px] font-bold text-text-muted">
                   Diagnostics
                 </h2>
+                <Show when={isConnected()}>
+                  <DiagnosticRow
+                    label="Connected for"
+                    tooltip={<span>{CONNECTED_FOR_TOOLTIP}</span>}
+                    value={connectedFor()}
+                  />
+                </Show>
                 <DiagnosticRow
                   label="Last checked"
                   tooltip={<span>{CHECKED_TOOLTIP}</span>}

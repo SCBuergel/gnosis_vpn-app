@@ -85,6 +85,7 @@ const BASE_APP_STATE: AppState = {
   warmupStatus: "",
   syncProgress: 0,
   syncPhase: null,
+  measuring: false,
   syncRecoveryReason: null,
   isUpdateAvailable: false,
   availableVersion: null,
