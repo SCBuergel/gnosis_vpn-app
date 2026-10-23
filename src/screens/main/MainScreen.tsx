@@ -66,6 +66,9 @@ export function MainScreen() {
   const showBalanceBanner = () =>
     balanceStatus() !== "Sufficient" &&
     dismissedBalanceStatus() !== balanceStatus();
+  const bannersShown = () =>
+    appState.endOfLife !== null || appState.isUpdateAvailable ||
+    showBalanceBanner() || maintenanceWarning() !== null;
   const balanceBannerText = () =>
     balanceStatus() === "Empty"
       ? "Your balance is empty"
@@ -113,8 +116,9 @@ export function MainScreen() {
         <Navigation pickerFrame={pickerFrame} />
       </div>
 
-      <div class="relative h-0 z-50">
-        <div class="absolute top-2 left-0 right-0 flex flex-col gap-2">
+      {/* In flow, not floating: a notice moves the hero down rather than covering the flag. */}
+      <Show when={bannersShown()}>
+        <div class="flex flex-col gap-2 pt-3">
           {/* No onDismiss: an end of life cannot be waved away. */}
           <Show when={appState.endOfLife}>
             {(endOfLife) => {
@@ -166,7 +170,7 @@ export function MainScreen() {
             )}
           </Show>
         </div>
-      </div>
+      </Show>
 
       <main
         ref={(el) => (columnRef = el)}
